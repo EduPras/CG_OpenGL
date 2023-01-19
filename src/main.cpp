@@ -6,9 +6,10 @@
 #include <streambuf>
 #include <fstream>
 
+#include "shader.hpp"
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-std::string loadShaderSrc(const char* src);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -50,45 +51,7 @@ int main()
         0, 1, 3,   // first triangle
         1, 2, 3    // second triangle
     };  
-    // Vertex
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    std::string vertexShaderSrc = loadShaderSrc("../assets/vertex_core.glsl");
-    const GLchar* vertShader = vertexShaderSrc.c_str();
-    glShaderSource(vertexShader, 1, &vertShader, NULL);
-    glCompileShader(vertexShader);
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if(!success)
-    {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    // Fragment
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    std::string fragmentShaderSrc = loadShaderSrc("../assets/fragment_core.glsl");
-    const GLchar* fragShader = fragmentShaderSrc.c_str();
-    glShaderSource(fragmentShader, 1, &fragShader, NULL);
-    glCompileShader(fragmentShader);
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if(!success)
-    {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    // Program
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    glGetShaderiv(shaderProgram, GL_COMPILE_STATUS, &success);
-    if(!success)
-    {
-        glGetShaderInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    glUseProgram(shaderProgram);
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);  
+    Shader shader("../assets/vertex_core.glsl", "../assets/fragment_core.glsl");
     // VBO and VAO
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
@@ -119,6 +82,7 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        shader.activate();
         glBindVertexArray(VAO);
         glUseProgram(shaderProgram);
         //glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -142,18 +106,4 @@ void processInput(GLFWwindow *window)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-}
-
-std::string loadShaderSrc(const char* src){
-    std::ifstream file;
-    std::stringstream buf;
-
-    file.open(src);
-    if(file.is_open()){
-        buf << file.rdbuf();
-    } else {
-        std::cout << "Could not open " << src << std::endl;
-    }
-    file.close();
-    return buf.str();
 }
