@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <filesystem>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -39,7 +40,7 @@ void Shader::activate(){ glUseProgram(ID);}
 std::string Shader::loadShaderSrc(const char* src){
     std::ifstream file;
     std::stringstream buf;
-
+    //std::cout << "Current root path is: " << std::filesystem::current_path()<< '\n';
     file.open(src);
     if(file.is_open()){
         buf << file.rdbuf();
