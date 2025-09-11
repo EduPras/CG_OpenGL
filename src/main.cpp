@@ -7,11 +7,13 @@
 #include "../include/utils.hpp"
 
 
-// Global to track how many segments to show
+// Globals for interaction
 int visible_segments = 1;
 bool space_was_pressed = false;
+int selected_vertex = 0;
+bool tab_was_pressed = false;
 
-void processInput(GLFWwindow *window, int total_segments) {
+void processInput(GLFWwindow *window, int total_segments, int visible_vertices, std::vector<Point>& data_points) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -23,6 +25,31 @@ void processInput(GLFWwindow *window, int total_segments) {
         }
     } else {
         space_was_pressed = false;
+    }
+
+    // TAB: select next visible vertex
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+        if (!tab_was_pressed) {
+            selected_vertex = (selected_vertex + 1) % visible_vertices;
+            tab_was_pressed = true;
+        }
+    } else {
+        tab_was_pressed = false;
+    }
+
+    // Arrow keys: move selected vertex
+    float move_step = 0.02f;
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        data_points[selected_vertex].y += move_step;
+    }
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        data_points[selected_vertex].y -= move_step;
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+        data_points[selected_vertex].x -= move_step;
+    }
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+        data_points[selected_vertex].x += move_step;
     }
 }
 
@@ -40,23 +67,9 @@ int main() {
         return 1;
     }
 
-    // Use drawSegmentByLineEquation for each segment between consecutive points (including last to first)
+    // Segments will be recomputed every frame as vertices may move
     std::vector<std::vector<Point>> segments;
-    for (size_t i = 0; i < data_points.size(); ++i) {
-        const Point& p1 = data_points[i];
-        const Point& p2 = data_points[(i + 1) % data_points.size()]; // wrap around for closed loop
-        segments.push_back(drawSegmentByLineEquation(p1.x, p1.y, p2.x, p2.y));
-    }
-
-    // Flatten all points for all segments (initially just the first segment)
     std::vector<float> vertices;
-    for (int seg = 0; seg < visible_segments; ++seg) {
-        for (const auto& p : segments[seg]) {
-            vertices.push_back(p.x);
-            vertices.push_back(p.y);
-            vertices.push_back(p.z);
-        }
-    }
 
     // Setup VAO and VBO
     unsigned int VAO, VBO;
@@ -73,9 +86,18 @@ int main() {
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
-        processInput(window, segments.size());
+        // Pass number of visible vertices (same as visible_segments)
+        processInput(window, data_points.size(), visible_segments, data_points);
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        // Recompute segments for current data_points
+        segments.clear();
+        for (size_t i = 0; i < data_points.size(); ++i) {
+            const Point& p1 = data_points[i];
+            const Point& p2 = data_points[(i + 1) % data_points.size()];
+            segments.push_back(drawSegmentByLineEquation(p1.x, p1.y, p2.x, p2.y));
+        }
 
         // Update vertices for visible segments
         vertices.clear();
@@ -92,6 +114,14 @@ int main() {
         shader.activate();
         glBindVertexArray(VAO);
         glDrawArrays(GL_POINTS, 0, vertices.size() / 3);
+
+        // Highlight the selected vertex (draw as a larger point)
+        glPointSize(10.0f);
+        std::vector<float> sel = { data_points[selected_vertex].x, data_points[selected_vertex].y, data_points[selected_vertex].z };
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sel.size() * sizeof(float), sel.data(), GL_DYNAMIC_DRAW);
+        glDrawArrays(GL_POINTS, 0, 1);
+        glPointSize(1.0f);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
