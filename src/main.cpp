@@ -1,109 +1,75 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
 #include <iostream>
-#include <sstream>
-#include <streambuf>
-#include <fstream>
+#include <vector>
+#include <string>
+#include "../include/shader.hpp"
+#include "../include/utils.hpp"
 
-#include "shader.hpp"
+void processInput(GLFWwindow *window) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+}
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow *window);
-
-// settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-
-int main()
-{
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
+int main() {
+    GLFWwindow* window = setupGLFW();
+    if (!window) {
         return -1;
     }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        return -1;
+    // Choose which OBJ file to load:
+    std::string objPath = "assets/nine_points.obj"; // Changed to nine_points.obj
+    auto data_points = loadOBJPoints(objPath);
+    if (data_points.size() < 2) {
+        std::cerr << "OBJ file must contain at least two points." << std::endl;
+        return 1;
     }
-    // CREATE TRIANGLES
-    unsigned int vertexShader, fragmentShader, shaderProgram;
-    int  success;
-    char infoLog[512];
-    float vertices[] = {
-        0.5f,  0.5f, 0.0f,  // top right
-        0.5f, -0.5f, 0.0f,  // bottom right
-        -0.5f, -0.5f, 0.0f,  // bottom left
-        -0.5f,  0.5f, 0.0f   // top left 
-    };
-    unsigned int indices[] = {  // note that we start from 0!
-        0, 1, 3,   // first triangle
-        1, 2, 3    // second triangle
-    };  
-    Shader shader("../assets/vertex_core.glsl", "../assets/fragment_core.glsl");
-    // VBO and VAO
-    unsigned int VBO, VAO, EBO;
+
+    // Use drawSegmentByLineEquation for each segment between consecutive points (including last to first)
+    std::vector<Point> all_line_points;
+    for (size_t i = 0; i < data_points.size(); ++i) {
+        const Point& p1 = data_points[i];
+        const Point& p2 = data_points[(i + 1) % data_points.size()]; // wrap around for closed loop
+        auto segment = drawSegmentByLineEquation(p1.x, p1.y, p2.x, p2.y);
+        all_line_points.insert(all_line_points.end(), segment.begin(), segment.end());
+    }
+
+    // Convert all generated line points to a flat float array for OpenGL
+    std::vector<float> vertices;
+    for (const auto& p : all_line_points) {
+        vertices.push_back(p.x);
+        vertices.push_back(p.y);
+        vertices.push_back(p.z);
+    }
+
+    // Setup VAO and VBO
+    unsigned int VAO, VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    // bind VAO
     glBindVertexArray(VAO);
-
-    // bind VBO
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // bind EBO
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); 
-
-    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    // render loop
-    // -----------
-    while (!glfwWindowShouldClose(window))
-    {
-        // input
-        processInput(window);
 
-        // render
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    // Load shaders
+    Shader shader("shaders/vertex_core.glsl", "shaders/fragment_core.glsl");
+
+    // Main loop
+    while (!glfwWindowShouldClose(window)) {
+        processInput(window);
+        glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         shader.activate();
         glBindVertexArray(VAO);
-        glUseProgram(shaderProgram);
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        // Draw all generated points as GL_POINTS (line segments approximated by points)
+        glDrawArrays(GL_POINTS, 0, all_line_points.size());
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     glfwTerminate();
     return 0;
-}
-
-void processInput(GLFWwindow *window)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
 }

@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "shader.hpp"
+#include "../include/shader.hpp"
 
 Shader::Shader(const char* vertexShaderPath, const char* fragmentShaderPath){
     int success;

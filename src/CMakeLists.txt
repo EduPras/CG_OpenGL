@@ -1,20 +1,24 @@
-find_package(OpenGL REQUIRED)
-find_package(glfw3 3.3 REQUIRED)
-find_package(glm REQUIRED)
+# --- src/CMakeLists.txt ---
 
-add_library(
-    shader
-    shader.hpp
+# Define the executable target and its source files
+add_executable(
+    LearnOpenGl
+    main.cpp
     shader.cpp
+    utils.cpp
 )
 
-add_executable(LearnOpenGl main.cpp)
-target_link_libraries(LearnOpenGl 
-    PRIVATE
-        ${OPENGL_LIBRARIES} 
-        glm
-        glfw
-    PUBLIC
-        external
-        shader
+
+# Add include directory for headers
+target_include_directories(LearnOpenGl PRIVATE ${CMAKE_SOURCE_DIR}/include)
+
+# Link the executable against the libraries it needs:
+target_link_libraries(
+    LearnOpenGl PRIVATE
+    glad_lib
+    glfw
+    OpenGL::GL
 )
+
+file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
