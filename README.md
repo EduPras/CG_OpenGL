@@ -172,6 +172,27 @@ make
 
 ---
 
+## Generating Documentation with Doxygen
+
+To generate API documentation from the source code comments:
+
+1. Install Doxygen (if not already installed):
+   ```sh
+   sudo apt-get install doxygen
+   ```
+2. Generate a default configuration file (if you don't have one):
+   ```sh
+   doxygen -g
+   ```
+3. Edit the `Doxyfile` as needed (set `PROJECT_NAME`, `RECURSIVE = YES`, etc).
+4. Run Doxygen to generate the documentation:
+   ```sh
+   doxygen Doxyfile
+   ```
+5. Open `html/index.html` in your browser to view the generated docs.
+
+---
+
 ## References
 
 - [Half-Edge Data Structure (Wikipedia)](https://en.wikipedia.org/wiki/Half-edge_data_structure)
