@@ -4,6 +4,10 @@
 #include <string>
 #include <glm/glm.hpp>
 
+// Forward declarations to avoid including glad in header
+typedef unsigned int GLuint;
+typedef unsigned int GLenum;
+
 class Shader {
     private:
     unsigned int ID;
