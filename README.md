@@ -2,7 +2,58 @@
 
 A modular C++ OpenGL project for interactive mesh visualization, featuring a robust half-edge mesh data structure, OBJ loading, and real-time viewport controls.
 
----
+
+## Summary
+
+- [Half-Edge Mesh: Logic and Math](#half-edge-mesh-logic-and-math)
+- [Transformations: Math and Logic](#transformations-math-and-logic)
+- [Shader Pipeline: How Rendering Works](#shader-pipeline-how-rendering-works)
+- [Module Overview](#module-overview)
+- [Interactive Controls](#interactive-controls)
+- [Building and Running](#building-and-running)
+- [References](#references)
+
+
+## Half-Edge Mesh: Logic and Math
+
+A half-edge mesh is a data structure for representing polygonal meshes, enabling efficient traversal and adjacency queries. Each edge is split into two "half-edges" with opposite directions.
+
+### Core Structures
+
+- **Vertex**: Stores position and a pointer to one outgoing half-edge.
+- **HalfEdge**: Stores pointers to its origin vertex, twin (opposite) half-edge, next half-edge in the face, and the face it borders.
+- **Face**: Stores a pointer to one of its bounding half-edges.
+
+### Construction Logic
+
+Given a list of points and face indices:
+1. For each face, create a loop of half-edges, each pointing to its origin vertex and the next half-edge.
+2. For each half-edge, find its twin (the half-edge with reversed origin/destination) and set the twin pointer.
+3. Assign one outgoing half-edge to each vertex and one bounding half-edge to each face.
+
+### Adjacency Queries
+
+- **Adjacent Faces of a Face**: For each half-edge of the face, if its twin exists, the twin’s face is adjacent.
+- **Adjacent Faces of an Edge**: The two faces sharing the edge (via the half-edge and its twin).
+- **Faces of a Vertex**: Walk around the vertex using outgoing half-edges, collecting each face.
+- **Edges of a Vertex**: Walk around the vertex, collecting each outgoing half-edge.
+
+### Math Under the Hood
+
+- **Edge Representation**: Each edge is represented as a pair of half-edges with opposite directions.
+- **Traversal**: To walk around a face, follow the `next` pointers of its half-edges. To walk around a vertex, follow `twin->next` pointers.
+- **Twin Lookup**: For each half-edge from vertex A to B, its twin is the half-edge from B to A.
+
+#### Example: Walking Around a Vertex
+
+```cpp
+do {
+    // e->face is a face containing v
+    e = e->twin->next;
+} while (e != start);
+```
+This loop visits all faces sharing vertex `v`.
+
 
 ## Features
 
@@ -12,19 +63,6 @@ A modular C++ OpenGL project for interactive mesh visualization, featuring a rob
 - Efficient edge and adjacency queries via half-edge structure
 - Modern OpenGL rendering pipeline
 
----
-
-## Project Structure
-
-- `src/` and `include/`: Source and header files for all modules
-- `mesh`: Mesh loading, storage, and half-edge construction
-- `viewer`: OpenGL context, rendering, and transformations
-- `input`: All input handling (mouse, keyboard, scroll)
-- `half_edge`: Half-edge mesh data structure and adjacency queries
-- `utils`: Utility functions (OBJ parsing, DDA, etc)
-- `shader`: Shader management
-
----
 
 ## Transformations: Math and Logic
 
@@ -61,7 +99,6 @@ where $t_x$ and $t_y$ are the pan offsets (controlled by CTRL+mouse drag).
 
 All these transformations are applied in sequence to each vertex before rendering.
 
----
 
 ## Shader Pipeline: How Rendering Works
 
@@ -85,50 +122,6 @@ The project uses a modern OpenGL shader pipeline for rendering:
 - Shaders provide flexibility and performance for custom rendering effects.
 - The pipeline allows for future extension (lighting, materials, etc).
 
----
-
-## Half-Edge Mesh: Logic and Math
-
-A half-edge mesh is a data structure for representing polygonal meshes, enabling efficient traversal and adjacency queries. Each edge is split into two "half-edges" with opposite directions.
-
-### Core Structures
-
-- **Vertex**: Stores position and a pointer to one outgoing half-edge.
-- **HalfEdge**: Stores pointers to its origin vertex, twin (opposite) half-edge, next half-edge in the face, and the face it borders.
-- **Face**: Stores a pointer to one of its bounding half-edges.
-
-### Construction Logic
-
-Given a list of points and face indices:
-1. For each face, create a loop of half-edges, each pointing to its origin vertex and the next half-edge.
-2. For each half-edge, find its twin (the half-edge with reversed origin/destination) and set the twin pointer.
-3. Assign one outgoing half-edge to each vertex and one bounding half-edge to each face.
-
-### Adjacency Queries
-
-- **Adjacent Faces of a Face**: For each half-edge of the face, if its twin exists, the twin’s face is adjacent.
-- **Adjacent Faces of an Edge**: The two faces sharing the edge (via the half-edge and its twin).
-- **Faces of a Vertex**: Walk around the vertex using outgoing half-edges, collecting each face.
-- **Edges of a Vertex**: Walk around the vertex, collecting each outgoing half-edge.
-
-### Math Under the Hood
-
-- **Edge Representation**: Each edge is represented as a pair of half-edges with opposite directions.
-- **Traversal**: To walk around a face, follow the `next` pointers of its half-edges. To walk around a vertex, follow `twin->next` pointers.
-- **Twin Lookup**: For each half-edge from vertex A to B, its twin is the half-edge from B to A.
-
-#### Example: Walking Around a Vertex
-
-Given a starting half-edge `e` with origin at vertex `v`:
-```
-do {
-    // e->face is a face containing v
-    e = e->twin->next;
-} while (e != start);
-```
-This loop visits all faces sharing vertex `v`.
-
----
 
 ## Module Overview
 
@@ -150,7 +143,6 @@ This loop visits all faces sharing vertex `v`.
 ### shader
 - Loads, compiles, and manages OpenGL shader programs.
 
----
 
 ## Interactive Controls
 
@@ -158,9 +150,22 @@ This loop visits all faces sharing vertex `v`.
 - **Zoom**: Mouse scroll
 - **Pan**: Hold CTRL and drag mouse
 
----
 
 ## Building and Running
+
+This project uses [GLFW3](https://www.glfw.org/) for window/context management and [GLAD](https://glad.dav1d.de/) for OpenGL function loading.
+
+### Installing GLFW3
+
+On Ubuntu/Debian:
+```sh
+sudo apt-get install libglfw3-dev
+```
+On other systems, see the [GLFW download page](https://www.glfw.org/download.html).
+
+GLAD is included as source in the repository and does not require separate installation.
+
+### Build and Run
 
 ```sh
 mkdir build
@@ -170,9 +175,8 @@ make
 ./src/LearnOpenGl
 ```
 
----
 
-## Generating Documentation with Doxygen
+### Generating Documentation with Doxygen
 
 To generate API documentation from the source code comments:
 
@@ -191,12 +195,13 @@ To generate API documentation from the source code comments:
    ```
 5. Open `html/index.html` in your browser to view the generated docs.
 
----
 
 ## References
 
 - [Half-Edge Data Structure (Wikipedia)](https://en.wikipedia.org/wiki/Half-edge_data_structure)
 - [OpenGL Programming Guide](https://www.opengl.org/documentation/)
 - [OBJ File Format](https://en.wikipedia.org/wiki/Wavefront_.obj_file)
+- [GLFW](https://www.glfw.org/)
+- [GLAD](https://glad.dav1d.de/)
 
 ---
