@@ -1,0 +1,10 @@
+# Simple OBJ file with 9 points forming a closed loop
+v 0.0 0.0 0.0
+v 0.8 0.0 0.0
+v 0.8 0.8 0.0
+v 0.0 0.8 0.0
+v -0.8 0.8 0.0
+v -0.8 0.0 0.0
+v -0.8 -0.8 0.0
+v 0.0 -0.8 0.0
+v 0.8 -0.8 0.0

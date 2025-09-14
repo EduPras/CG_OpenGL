@@ -5,7 +5,6 @@ CMakeCache.txt
 cmake_install.cmake
 Makefile
 *.o
-*.obj
 *.exe
 *.out
 *.log
@@ -14,4 +13,4 @@ Makefile
 *.swo
 *.DS_Store
 .vscode
-docs/
+doxygen/
