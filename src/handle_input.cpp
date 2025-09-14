@@ -9,7 +9,22 @@ extern bool space_was_pressed;
 extern int selected_vertex;
 extern bool tab_was_pressed;
 
-void processInput(GLFWwindow *window, int total_segments, int visible_vertices, std::vector<Point>& data_points) {
+void processInput(GLFWwindow *window, int total_segments, int visible_vertices, std::vector<Point>& data_points, float& zoom_level, float& rotation_angle, float& pan_x, float& pan_y) {
+    // +/-: zoom in/out
+    if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
+        zoom_level *= 1.01f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS) {
+        zoom_level /= 1.01f;
+    }
+
+    // Q/E: rotate left/right
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        rotation_angle -= 0.01f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        rotation_angle += 0.01f;
+    }
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -33,18 +48,18 @@ void processInput(GLFWwindow *window, int total_segments, int visible_vertices, 
         tab_was_pressed = false;
     }
 
-    // Arrow keys: move selected vertex
-    float move_step = 0.02f;
+    // Arrow keys: pan viewport
+    float pan_step = 0.05f;
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-        data_points[selected_vertex].y += move_step;
+        pan_y += pan_step;
     }
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        data_points[selected_vertex].y -= move_step;
+        pan_y -= pan_step;
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-        data_points[selected_vertex].x -= move_step;
+        pan_x -= pan_step;
     }
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-        data_points[selected_vertex].x += move_step;
+        pan_x += pan_step;
     }
 }

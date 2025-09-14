@@ -1,3 +1,4 @@
+
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -20,6 +21,26 @@ std::vector<Point> loadOBJPoints(const std::string& filename) {
     return points;
 }
 
+std::vector<std::vector<int>> loadOBJFaces(const std::string& filename) {
+    std::vector<std::vector<int>> faces;
+    std::ifstream file(filename);
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.size() > 0 && line[0] == 'f' && (line[1] == ' ' || line[1] == '\t')) {
+            std::istringstream iss(line.substr(2));
+            std::vector<int> inds;
+            std::string vstr;
+            while (iss >> vstr) {
+                size_t slash = vstr.find('/');
+                if (slash != std::string::npos) vstr = vstr.substr(0, slash);
+                int idx = std::stoi(vstr);
+                inds.push_back(idx - 1); // OBJ is 1-based
+            }
+            faces.push_back(inds);
+        }
+    }
+    return faces;
+}
 
 std::vector<Point> drawSegmentByLineEquation(float x1, float y1, float x2, float y2) {
     std::vector<Point> points;

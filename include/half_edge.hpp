@@ -26,9 +26,6 @@ struct Face {
     HalfEdge* edge = nullptr;
 };
 
-// Utility to create a quad mesh (two triangles sharing an edge)
-void createQuadMesh(std::vector<Vertex>& vertices, std::vector<HalfEdge>& halfedges, std::vector<Face>& faces);
-
 // Adjacency queries
 std::vector<Face*> getAdjacentFacesOfFace(Face* f);
 std::vector<Face*> getAdjacentFacesOfEdge(HalfEdge* e);
