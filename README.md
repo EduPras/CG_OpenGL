@@ -32,32 +32,32 @@ The application supports interactive transformations of the mesh in the viewport
 
 - **Rotation**: The mesh is rotated around the selected axis (X, Y, or Z) by applying a 2D or 3D rotation matrix to each vertex. For example, rotating around Z:
 
-    $$
-    \begin{bmatrix} x' \\ y' \\ z' \end{bmatrix} =
-    \begin{bmatrix} \cos\theta & -\sin\theta & 0 \\
-                    \sin\theta &  \cos\theta & 0 \\
-                    0          &  0          & 1 \end{bmatrix}
-    \begin{bmatrix} x \\ y \\ z \end{bmatrix}
-    $$
+```math
+\begin{bmatrix} x' \\ y' \\ z' \end{bmatrix} =
+\begin{bmatrix} \cos\theta & -\sin\theta & 0 \\
+                \sin\theta &  \cos\theta & 0 \\
+                0          &  0          & 1 \end{bmatrix}
+\begin{bmatrix} x \\ y \\ z \end{bmatrix}
+```
 
   In code, this is done by updating each point's coordinates using the current rotation angle and axis.
 
 - **Scaling (Zoom)**: The mesh is scaled uniformly by multiplying each coordinate by the zoom factor:
 
-    $$
-    x' = x \cdot s \\
-    y' = y \cdot s \\
-    z' = z \cdot s
-    $$
-    where $s$ is the zoom level (controlled by mouse scroll).
+```math
+x' = x \cdot s 
+y' = y \cdot s 
+z' = z \cdot s
+```
+where $s$ is the zoom level (controlled by mouse scroll).
 
 - **Translation (Pan)**: The mesh is moved in the viewport by adding pan offsets to the $x$ and $y$ coordinates:
 
-    $$
-    x' = x + t_x \\
-    y' = y + t_y
-    $$
-    where $t_x$ and $t_y$ are the pan offsets (controlled by CTRL+mouse drag).
+```math
+x' = x + t_x 
+y' = y + t_y
+```
+where $t_x$ and $t_y$ are the pan offsets (controlled by CTRL+mouse drag).
 
 All these transformations are applied in sequence to each vertex before rendering.
 
