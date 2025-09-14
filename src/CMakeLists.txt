@@ -6,6 +6,8 @@ add_executable(
     main.cpp
     shader.cpp
     utils.cpp
+    handle_input.cpp
+    half_edge.cpp
 )
 
 

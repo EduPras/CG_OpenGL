@@ -1,9 +1,9 @@
+// Parse face indices from OBJ file (returns vector of vector of indices)
 #pragma once
 #include <vector>
 #include <string>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
+struct GLFWwindow;
 struct Point {
     float x, y, z;
 };

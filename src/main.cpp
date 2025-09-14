@@ -4,7 +4,9 @@
 #include <vector>
 #include <string>
 #include "../include/shader.hpp"
+
 #include "../include/utils.hpp"
+#include "../include/half_edge.hpp"
 
 
 // Globals for interaction
@@ -13,45 +15,8 @@ bool space_was_pressed = false;
 int selected_vertex = 0;
 bool tab_was_pressed = false;
 
-void processInput(GLFWwindow *window, int total_segments, int visible_vertices, std::vector<Point>& data_points) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
 
-    // SPACE: reveal next segment
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (!space_was_pressed) {
-            visible_segments = std::min(visible_segments + 1, total_segments);
-            space_was_pressed = true;
-        }
-    } else {
-        space_was_pressed = false;
-    }
-
-    // TAB: select next visible vertex
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-        if (!tab_was_pressed) {
-            selected_vertex = (selected_vertex + 1) % visible_vertices;
-            tab_was_pressed = true;
-        }
-    } else {
-        tab_was_pressed = false;
-    }
-
-    // Arrow keys: move selected vertex
-    float move_step = 0.02f;
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-        data_points[selected_vertex].y += move_step;
-    }
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        data_points[selected_vertex].y -= move_step;
-    }
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-        data_points[selected_vertex].x -= move_step;
-    }
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-        data_points[selected_vertex].x += move_step;
-    }
-}
+#include "../include/handle_input.hpp"
 
 int main() {
     GLFWwindow* window = setupGLFW();
@@ -59,13 +24,14 @@ int main() {
         return -1;
     }
 
-    // Choose which OBJ file to load:
-    std::string objPath = "assets/nine_points.obj"; // Changed to nine_points.obj
-    auto data_points = loadOBJPoints(objPath);
-    if (data_points.size() < 2) {
-        std::cerr << "OBJ file must contain at least two points." << std::endl;
-        return 1;
-    }
+    // Load OBJ points and faces
+    std::string objPath = "assets/bunny.obj"; // or any OBJ file
+    std::vector<Point> obj_points = loadOBJPoints(objPath);
+
+    // Build half-edge mesh from OBJ data
+
+    // Use OBJ points for editing/moving
+    std::vector<Point> data_points = obj_points;
 
     // Segments will be recomputed every frame as vertices may move
     std::vector<std::vector<Point>> segments;
@@ -84,6 +50,8 @@ int main() {
     // Load shaders
     Shader shader("shaders/vertex_core.glsl", "shaders/fragment_core.glsl");
 
+    visible_segments = data_points.size(); // Start by showing all segments
+
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         // Pass number of visible vertices (same as visible_segments)
@@ -91,12 +59,12 @@ int main() {
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Recompute segments for current data_points
+        // Recompute segments for current data_points (draw polygon outline dynamically)
         segments.clear();
-        for (size_t i = 0; i < data_points.size(); ++i) {
-            const Point& p1 = data_points[i];
-            const Point& p2 = data_points[(i + 1) % data_points.size()];
-            segments.push_back(drawSegmentByLineEquation(p1.x, p1.y, p2.x, p2.y));
+        int n = data_points.size();
+        for (int i = 0; i < n; ++i) {
+            int j = (i + 1) % n;
+            segments.push_back(drawSegmentByLineEquation(data_points[i].x, data_points[i].y, data_points[j].x, data_points[j].y));
         }
 
         // Update vertices for visible segments

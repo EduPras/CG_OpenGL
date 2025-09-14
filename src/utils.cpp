@@ -1,8 +1,9 @@
-#include "../include/utils.hpp"
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <glad/glad.h> // keep this
+#include <GLFW/glfw3.h> // keep this
+#include "../include/utils.hpp"
 
 std::vector<Point> loadOBJPoints(const std::string& filename) {
     std::vector<Point> points;
