@@ -14,16 +14,56 @@
 #include "../include/input.hpp"
 
 
-// Interaction state
+
+/**
+ * @brief Number of visible segments in the mesh.
+ */
 int visible_segments = 1;
+
+/**
+ * @brief Index of the currently selected vertex.
+ */
 int selected_vertex = 0;
+
+/**
+ * @brief Current zoom level for the viewport.
+ */
 float zoom_level = 1.0f;
+
+/**
+ * @brief Current rotation angle (radians) for the viewport.
+ */
 float rotation_angle = 0.0f;
+
+/**
+ * @brief Current pan offset for the viewport (x, y).
+ */
 float pan_x = 0.0f, pan_y = 0.0f;
+
+/**
+ * @brief Whether the mouse is currently dragging.
+ */
 bool dragging = false;
+
+/**
+ * @brief Current axis of rotation (0: none, 1: X, 2: Y, 3: Z).
+ */
 int rotate_axis = 0;
+
+/**
+ * @brief Last mouse position (x, y).
+ */
 double last_mouse_x = 0.0, last_mouse_y = 0.0;
 
+
+/**
+ * @brief Main entry point. Initializes modules and runs the main loop.
+ *
+ * Sets up the OpenGL context, loads the mesh, initializes the viewer and input callbacks,
+ * and enters the main rendering loop. Handles viewport transformations and drawing.
+ *
+ * @return Exit code.
+ */
 int main() {
 
     GLFWwindow* window = setupGLFW();

@@ -6,6 +6,8 @@
 #include <GLFW/glfw3.h> // keep this
 #include "../include/utils.hpp"
 
+
+// Load vertex positions from an OBJ file (lines starting with 'v ')
 std::vector<Point> loadOBJPoints(const std::string& filename) {
     std::vector<Point> points;
     std::ifstream file(filename);
@@ -21,6 +23,8 @@ std::vector<Point> loadOBJPoints(const std::string& filename) {
     return points;
 }
 
+
+// Load face indices from an OBJ file (lines starting with 'f ')
 std::vector<std::vector<int>> loadOBJFaces(const std::string& filename) {
     std::vector<std::vector<int>> faces;
     std::ifstream file(filename);
@@ -42,6 +46,8 @@ std::vector<std::vector<int>> loadOBJFaces(const std::string& filename) {
     return faces;
 }
 
+
+// Generate points along a line segment using the DDA algorithm
 std::vector<Point> drawSegmentByLineEquation(float x1, float y1, float x2, float y2) {
     std::vector<Point> points;
     // DDA algorithm: step along the axis with the largest difference
@@ -65,10 +71,14 @@ std::vector<Point> drawSegmentByLineEquation(float x1, float y1, float x2, float
 }
 
 
+
+// GLFW framebuffer resize callback: update OpenGL viewport
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
+
+// Set up GLFW and OpenGL context, return window pointer
 GLFWwindow* setupGLFW(){
     // GLFW and OpenGL setup
     glfwInit();
