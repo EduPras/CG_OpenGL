@@ -7,6 +7,12 @@
 #include <set>
 #include "utils.hpp"
 
+
+// Forward declarations to resolve circular dependencies
+struct HalfEdge;
+struct Vertex;
+struct Face;
+
 /**
  * @brief Vertex in a half-edge mesh structure.
  *

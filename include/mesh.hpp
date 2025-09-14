@@ -1,4 +1,7 @@
 
+#ifndef MESH_HPP
+#define MESH_HPP
+#include "half_edge.hpp"
 /**
  * @brief Represents a 3D mesh with geometry and half-edge structure.
  * 
@@ -44,3 +47,5 @@ public:
      */
     void buildHalfEdge();
 };
+
+#endif // MESH_HPP
