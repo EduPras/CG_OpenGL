@@ -8,7 +8,6 @@ add_executable(
     utils.cpp
     half_edge.cpp
     mesh.cpp
-    viewer.cpp
     input.cpp
 )
 

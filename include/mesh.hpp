@@ -1,51 +1,38 @@
 
 #ifndef MESH_HPP
 #define MESH_HPP
+#pragma once
+
+#include <vector>
+#include <string>
+#include "utils.hpp"
 #include "half_edge.hpp"
-/**
- * @brief Represents a 3D mesh with geometry and half-edge structure.
- * 
- * The Mesh class stores vertex positions, face indices, and half-edge data structures.
- * It provides methods for loading geometry from OBJ files and building the half-edge mesh.
- */
+
 class Mesh {
 public:
-    /**
-     * @brief List of 3D points (vertices) in the mesh.
-     */
+    // Raw data loaded from the OBJ file
     std::vector<Point> points;
+    std::vector<std::vector<int>> face_indices;
 
-    /**
-     * @brief List of faces, each as a vector of vertex indices.
-     */
-    std::vector<std::vector<int>> faces;
-
-    /**
-     * @brief Half-edge mesh vertices.
-     */
+    // Half-edge data structures
     std::vector<Vertex> verticesHE;
-
-    /**
-     * @brief Half-edge mesh half-edges.
-     */
     std::vector<HalfEdge> halfedgesHE;
-
-    /**
-     * @brief Half-edge mesh faces.
-     */
     std::vector<Face> facesHE;
 
-    /**
-     * @brief Loads mesh geometry from an OBJ file.
-     * @param filename Path to the OBJ file.
-     * @return True if loading was successful, false otherwise.
-     */
-    bool loadFromOBJ(const std::string& filename);
+    // --- NEW: Modern OpenGL rendering members ---
+    unsigned int VAO, VBO, EBO; // Vertex Array, Vertex Buffer, Element Buffer Objects
+    unsigned int line_index_count; // How many indices to draw for lines
 
-    /**
-     * @brief Builds the half-edge mesh structure from points and faces.
-     */
+    // --- Member function declarations ---
+    Mesh(); // Constructor
+    ~Mesh(); // Destructor to clean up GPU resources
+
+    bool loadFromOBJ(const std::string& filename);
     void buildHalfEdge();
+
+    // --- NEW: OpenGL setup and drawing ---
+    void setupMesh();
+    void draw(); // The new draw call
 };
 
 #endif // MESH_HPP

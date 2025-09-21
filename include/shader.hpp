@@ -22,19 +22,6 @@ private:
      */
     unsigned int ID;
 
-public:
-    /**
-     * @brief Constructs a shader program from vertex and fragment shader files.
-     * @param vertexShaderPath Path to the vertex shader source file.
-     * @param fragmentShaderPath Path to the fragment shader source file.
-     */
-    Shader(const char* vertexShaderPath, const char* fragmentShaderPath);
-
-    /**
-     * @brief Activates the shader program for rendering.
-     */
-    void activate();
-
     /**
      * @brief Loads shader source code from a file.
      * @param filepath Path to the shader source file.
@@ -50,12 +37,35 @@ public:
      */
     GLuint compileShader(const char* filepath, GLenum type);
 
+
+    
+
+public:
+    /**
+     * @brief Constructs a shader program from vertex and fragment shader files.
+     * @param vertexShaderPath Path to the vertex shader source file.
+     * @param fragmentShaderPath Path to the fragment shader source file.
+     */
+    Shader(const char* vertexShaderPath, const char* fragmentShaderPath);
+
+    /**
+     * @brief Activates the shader program for rendering.
+     */
+    void activate();
+
     /**
      * @brief Sets a 4x4 matrix uniform in the shader.
      * @param name Name of the uniform variable.
      * @param val Matrix value to set.
      */
     void setMat4(const std::string& name, glm::mat4 val);
+    
+    /**
+     * @brief Sets a vec4 uniform in the shader.
+     * @param name Name of the uniform variable.
+     * @param val Vector value to set.
+     */
+    void setVec4(const std::string& name, const glm::vec4& val);
 };
 
 #endif

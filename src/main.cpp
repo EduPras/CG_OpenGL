@@ -1,158 +1,117 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <vector>
 #include <string>
-#include "../include/shader.hpp"
+#include <algorithm> // For std::find
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
-#include "../include/utils.hpp"
-#include "../include/mesh.hpp"
-#include "../include/viewer.hpp"
-#include "../include/input.hpp"
+#include "shader.hpp"
+#include "mesh.hpp"
+#include "input.hpp"
+#include "half_edge.hpp"
+#include "utils.hpp"
 
-/**
- * @brief Number of visible segments in the mesh.
- */
-int visible_segments = 1;
-
-/**
- * @brief Index of the currently selected vertex.
- */
-int selected_vertex = 0;
-
-/**
- * @brief Current zoom level for the viewport.
- */
+// --- Global variables for camera and input state ---
 float zoom_level = 1.0f;
-
-/**
- * @brief Current rotation angle (radians) for the viewport.
- */
-float rotation_angle = 0.0f;
-
-/**
- * @brief Current pan offset for the viewport (x, y).
- */
-float pan_x = 0.0f, pan_y = 0.0f;
-
-/**
- * @brief Whether the mouse is currently dragging.
- */
-bool dragging = false;
-
-/**
- * @brief Current axis of rotation (0: none, 1: X, 2: Y, 3: Z).
- */
-int rotate_axis = 0;
-
-/**
- * @brief Last mouse position (x, y).
- */
-double last_mouse_x = 0.0, last_mouse_y = 0.0;
+float rotation_angle_y = 0.0f;
+float rotation_angle_x = 0.0f;
+glm::vec2 pan_offset = glm::vec2(0.0f, 0.0f);
 
 
-/**
- * @brief Main entry point. Initializes modules and runs the main loop.
- *
- * Sets up the OpenGL context, loads the mesh, initializes the viewer and input callbacks,
- * and enters the main rendering loop. Handles viewport transformations and drawing.
- *
- * @return Exit code.
- */
 int main() {
-
     GLFWwindow* window = setupGLFW();
+    if (!window) return -1;
 
-    if (!window) {
+    Mesh mesh;
+    if (!mesh.loadFromOBJ("assets/bunny.obj")) {
+        std::cerr << "Failed to load mesh, exiting." << std::endl;
         return -1;
     }
-
-    // --- Modularized version ---
-    Mesh mesh;
-    mesh.loadFromOBJ("assets/cube.obj");
     mesh.buildHalfEdge();
+    mesh.setupMesh();
 
-    // Ensure cursor mode is normal for ImGui interactivity
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    Viewer viewer;
-    viewer.setupGL();
     Shader shader("shaders/vertex_core.glsl", "shaders/fragment_core.glsl");
-    viewer.setShader(&shader);
+    setupInputCallbacks(window, &zoom_level, &rotation_angle_x, &rotation_angle_y, &pan_offset);
+    
+    // --- Setup for Highlight Rendering ---
+    GLuint highlightVAO, highlightVBO;
+    glGenVertexArrays(1, &highlightVAO);
+    glGenBuffers(1, &highlightVBO);
+    glBindVertexArray(highlightVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, highlightVBO);
+    glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
 
-    // Input state
-    dragging = false;
-    rotate_axis = 0;
-    last_mouse_x = 0.0;
-    last_mouse_y = 0.0;
-    setupInputCallbacks(
-        window, &mesh, &viewer,
-        &rotate_axis, &dragging,
-        &last_mouse_x, &last_mouse_y,
-        &zoom_level,
-        &pan_x, &pan_y
-    );
+    std::vector<float> highlighted_vertices;
 
-    // Setup Dear ImGui context
+    // Setup Dear ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    visible_segments = mesh.points.size();
-    selected_vertex = 0;
+    glEnable(GL_DEPTH_TEST);
+    glLineWidth(2.5f); 
+    glEnable(GL_LINE_SMOOTH);
 
     while (!glfwWindowShouldClose(window)) {
-        glClearColor(0.f, 0.f, 0.f, 1.f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glfwPollEvents();
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Apply zoom and rotation to a copy of mesh.points for rendering
-        std::vector<Point> transformed_points = mesh.points;
-        float cos_theta = cos(rotation_angle);
-        float sin_theta = sin(rotation_angle);
-        for (auto& p : transformed_points) {
-            float x_new = p.x * cos_theta - p.y * sin_theta;
-            float y_new = p.x * sin_theta + p.y * cos_theta;
-            p.x = x_new * zoom_level + pan_x;
-            p.y = y_new * zoom_level + pan_y;
-            p.z = p.z * zoom_level;
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        float aspect_ratio = (height > 0) ? (float)width / (float)height : 1.0f;
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect_ratio, 0.1f, 100.0f);
+        glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(pan_offset.x, pan_offset.y, -3.0f / zoom_level));
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::rotate(model, rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4 mvp = projection * view * model;
+
+        shader.activate();
+        shader.setMat4("mvp", mvp);
+
+        // --- 1. Draw the main mesh in white ---
+        shader.setVec4("ourColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        mesh.draw();
+
+        // --- 2. Draw the highlighted geometry in green ---
+        if (!highlighted_vertices.empty()) {
+            // *** THE FIX: Disable depth testing to prevent Z-fighting ***
+            glDisable(GL_DEPTH_TEST);
+
+            shader.setVec4("ourColor", glm::vec4(0.1f, 1.0f, 0.2f, 1.0f));
+            
+            glBindVertexArray(highlightVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, highlightVBO);
+            glBufferData(GL_ARRAY_BUFFER, highlighted_vertices.size() * sizeof(float), highlighted_vertices.data(), GL_DYNAMIC_DRAW);
+            
+            glDrawArrays(GL_LINES, 0, highlighted_vertices.size() / 3);
+            glBindVertexArray(0);
+
+            // *** Re-enable depth testing for the rest of the scene ***
+            glEnable(GL_DEPTH_TEST);
         }
 
-        viewer.drawMeshPoints(mesh, transformed_points);
-
-        // Highlight the selected vertex (draw as a larger point)
-        glPointSize(10.0f);
-        std::vector<float> sel = { transformed_points[selected_vertex].x, transformed_points[selected_vertex].y, transformed_points[selected_vertex].z };
-        glBindBuffer(GL_ARRAY_BUFFER, viewer.VBO);
-        glBufferData(GL_ARRAY_BUFFER, sel.size() * sizeof(float), sel.data(), GL_DYNAMIC_DRAW);
-        glDrawArrays(GL_POINTS, 0, 1);
-        glPointSize(1.0f);
-
-        // glfwSwapBuffers(window);
-        // glfwPollEvents();
-
+        // --- ImGui Rendering ---
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // --- Mesh Operations UI ---
+        ImGui::Begin("Half-Edge Operations");
         static int operation = 0;
-        const char* operations[] = {
-            "Faces of Vertex",
-            "Edges of Vertex",
-            "Adjacent Faces of Face",
-            "Adjacent Faces of Edge"
-        };
-        // ImGui::Begin("Mesh Operations");
-        ImGui::Begin("Mesh Operations", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+        const char* operations[] = { "Faces of Vertex", "Edges of Vertex", "Adjacent Faces of Face", "Adjacent Faces of Edge" };
         ImGui::Combo("Operation", &operation, operations, IM_ARRAYSIZE(operations));
 
         static int selected_vertex = 0;
@@ -160,65 +119,100 @@ int main() {
         static int selected_edge = 0;
         static std::vector<std::string> results;
 
-        if (operation == 0) {
-            ImGui::SliderInt("Vertex", &selected_vertex, 0, (int)mesh.verticesHE.size() - 1);
-            if (ImGui::Button("Run")) {
+        // --- IMGUI LOGIC WITH COMPLETE HIGHLIGHTING ---
+        if (operation == 0 && !mesh.verticesHE.empty()) { // Faces of Vertex
+            ImGui::SliderInt("Vertex Index", &selected_vertex, 0, (int)mesh.verticesHE.size() - 1);
+            if (ImGui::Button("Run Query")) {
                 results.clear();
+                highlighted_vertices.clear();
                 auto faces = getFacesOfVertex(&mesh.verticesHE[selected_vertex]);
                 for (auto* f : faces) {
-                    int idx = (int)(f - &mesh.facesHE[0]);
-                    results.push_back("Face index: " + std::to_string(idx));
+                    results.push_back("Face index: " + std::to_string(f - &mesh.facesHE[0]));
+                    HalfEdge* start_he = f->edge;
+                    HalfEdge* current_he = start_he;
+                    do {
+                        Vertex* v1 = current_he->origin;
+                        Vertex* v2 = current_he->next->origin;
+                        highlighted_vertices.insert(highlighted_vertices.end(), {v1->x, v1->y, v1->z, v2->x, v2->y, v2->z});
+                        current_he = current_he->next;
+                    } while (current_he != start_he);
                 }
             }
-        } else if (operation == 1) {
-            ImGui::SliderInt("Vertex", &selected_vertex, 0, (int)mesh.verticesHE.size() - 1);
-            if (ImGui::Button("Run")) {
+        } else if (operation == 1 && !mesh.verticesHE.empty()) { // Edges of Vertex
+            ImGui::SliderInt("Vertex Index", &selected_vertex, 0, (int)mesh.verticesHE.size() - 1);
+            if (ImGui::Button("Run Query")) {
                 results.clear();
+                highlighted_vertices.clear();
                 auto edges = getEdgesOfVertex(&mesh.verticesHE[selected_vertex]);
                 for (auto* e : edges) {
-                    int idx = (int)(e - &mesh.halfedgesHE[0]);
-                    results.push_back("Edge index: " + std::to_string(idx));
+                    results.push_back("Edge index: " + std::to_string(e - &mesh.halfedgesHE[0]));
+                    Vertex* v1 = e->origin;
+                    Vertex* v2 = e->next->origin;
+                    highlighted_vertices.insert(highlighted_vertices.end(), {v1->x, v1->y, v1->z, v2->x, v2->y, v2->z});
                 }
             }
-        } else if (operation == 2) {
-            ImGui::SliderInt("Face", &selected_face, 0, (int)mesh.facesHE.size() - 1);
-            if (ImGui::Button("Run")) {
+        } else if (operation == 2 && !mesh.facesHE.empty()) { // Adjacent Faces of Face
+             ImGui::SliderInt("Face Index", &selected_face, 0, (int)mesh.facesHE.size() - 1);
+             if (ImGui::Button("Run Query")) {
                 results.clear();
-                auto adj = getAdjacentFacesOfFace(&mesh.facesHE[selected_face]);
-                for (auto* f : adj) {
-                    int idx = (int)(f - &mesh.facesHE[0]);
-                    results.push_back("Adjacent Face index: " + std::to_string(idx));
+                highlighted_vertices.clear();
+                auto adj_faces = getAdjacentFacesOfFace(&mesh.facesHE[selected_face]);
+                for (auto* f : adj_faces) {
+                    results.push_back("Adjacent Face: " + std::to_string(f - &mesh.facesHE[0]));
+                    HalfEdge* start_he = f->edge;
+                    HalfEdge* current_he = start_he;
+                    do {
+                        Vertex* v1 = current_he->origin;
+                        Vertex* v2 = current_he->next->origin;
+                        highlighted_vertices.insert(highlighted_vertices.end(), {v1->x, v1->y, v1->z, v2->x, v2->y, v2->z});
+                        current_he = current_he->next;
+                    } while (current_he != start_he);
                 }
             }
-        } else if (operation == 3) {
-            ImGui::SliderInt("Edge", &selected_edge, 0, (int)mesh.halfedgesHE.size() - 1);
-            if (ImGui::Button("Run")) {
+        } else if (operation == 3 && !mesh.halfedgesHE.empty()) { // Adjacent Faces of Edge
+            ImGui::SliderInt("Edge Index", &selected_edge, 0, (int)mesh.halfedgesHE.size() - 1);
+            if (ImGui::Button("Run Query")) {
                 results.clear();
-                auto adj = getAdjacentFacesOfEdge(&mesh.halfedgesHE[selected_edge]);
-                for (auto* f : adj) {
-                    int idx = (int)(f - &mesh.facesHE[0]);
-                    results.push_back("Adjacent Face index: " + std::to_string(idx));
+                highlighted_vertices.clear();
+                auto adj_faces = getAdjacentFacesOfEdge(&mesh.halfedgesHE[selected_edge]);
+                for(auto* f : adj_faces) {
+                    results.push_back("Adjacent Face: " + std::to_string(f - &mesh.facesHE[0]));
+                    HalfEdge* start_he = f->edge;
+                    HalfEdge* current_he = start_he;
+                    do {
+                        Vertex* v1 = current_he->origin;
+                        Vertex* v2 = current_he->next->origin;
+                        highlighted_vertices.insert(highlighted_vertices.end(), {v1->x, v1->y, v1->z, v2->x, v2->y, v2->z});
+                        current_he = current_he->next;
+                    } while (current_he != start_he);
                 }
             }
         }
 
         ImGui::Separator();
         ImGui::Text("Results:");
-        for (const auto& r : results) {
-            ImGui::Text("%s", r.c_str());
+        if (results.empty()) {
+            ImGui::Text("None");
+        } else {
+            for (const auto& r : results) {
+                ImGui::Text("%s", r.c_str());
+            }
         }
         ImGui::End();
-
+        
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 
+    // Cleanup
+    glDeleteVertexArrays(1, &highlightVAO);
+    glDeleteBuffers(1, &highlightVBO);
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }
+
