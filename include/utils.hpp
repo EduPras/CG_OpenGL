@@ -2,7 +2,6 @@
 #include <vector>
 #include <string>
 
-
 struct GLFWwindow;
 
 /**
@@ -27,7 +26,7 @@ std::vector<Point> loadOBJPoints(const std::string& filename);
  * @param y2 End y.
  * @return Vector of Point structs along the segment.
  */
-std::vector<Point> drawSegmentByLineEquation(float x1, float y1, float x2, float y2);
+std::vector<Point> drawSegmentByLineEquation3D(const Point& p1, const Point& p2);
 
 /**
  * @brief Loads face indices from an OBJ file.

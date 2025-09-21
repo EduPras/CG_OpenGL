@@ -3,7 +3,7 @@
 #include "../include/half_edge.hpp"
 #include <vector>
 #include <iostream>
-
+#include <algorithm>
 
 
 // Hash function for std::pair, used in unordered_map for edge lookup
@@ -103,31 +103,87 @@ std::vector<Face*> getAdjacentFacesOfEdge(HalfEdge* e) {
 }
 
 
-// Given a vertex, return all faces that include the vertex
+// *** FIXED ROBUST VERSION ***
+// Traverses all faces around a vertex, even if there are boundaries.
 std::vector<Face*> getFacesOfVertex(Vertex* v) {
     std::vector<Face*> faces;
     if (!v || !v->edge) return faces;
-    HalfEdge* start = v->edge;
-    HalfEdge* e = start;
+
+    HalfEdge* start_he = v->edge;
+    
+    // --- Forward (CW) traversal ---
+    HalfEdge* current_he = start_he;
     do {
-        if (e->face) faces.push_back(e->face);
-        // Move to the next outgoing edge around the vertex
-        e = e->twin ? e->twin->next : nullptr;
-    } while (e && e != start);
+        if (current_he->face) {
+            faces.push_back(current_he->face);
+        }
+        current_he = current_he->twin ? current_he->twin->next : nullptr;
+    } while (current_he != nullptr && current_he != start_he);
+
+    // --- Backward (CCW) traversal for boundaries ---
+    if (current_he == nullptr) { // We hit a boundary, so traverse the other way
+        // To go "backward", find the previous edge in the face loop and take its twin.
+        HalfEdge* pred = start_he;
+        // Start the backward traversal from the start edge's predecessor
+        // Use a safe for loop to prevent infinite loops on malformed geometry
+        for (int i = 0; i < 256; ++i) { 
+            if (pred->next == start_he) break;
+            pred = pred->next;
+            if (i == 255) return faces; // Safety break
+        }
+        current_he = pred->twin;
+
+        while (current_he != nullptr) {
+            if (current_he->face) {
+                faces.push_back(current_he->face);
+            }
+            pred = current_he;
+            bool found_pred = false;
+            // Use a safe for loop to find the next predecessor
+            for(int i=0; i < 256; ++i) {
+                if (pred->next == current_he) {
+                    found_pred = true;
+                    break;
+                }
+                pred = pred->next;
+            }
+            // If the loop structure is broken, stop to prevent a crash
+            if (!found_pred) break;
+            current_he = pred->twin;
+        }
+    }
     return faces;
 }
 
 
-// Given a vertex, return all outgoing half-edges from the vertex
+// *** FIXED ROBUST VERSION ***
+// Traverses all outgoing edges from a vertex, even if there are boundaries.
 std::vector<HalfEdge*> getEdgesOfVertex(Vertex* v) {
-    std::vector<HalfEdge*> edges;
-    if (!v || !v->edge) return edges;
-    HalfEdge* start = v->edge;
-    HalfEdge* e = start;
-    do {
-        edges.push_back(e);
-        // Move to the next outgoing edge around the vertex
-        e = e->twin ? e->twin->next : nullptr;
-    } while (e && e != start);
-    return edges;
+    std::vector<HalfEdge*> incident_edges;
+    if (!v || !v->edge) return incident_edges;
+
+    // First, get all faces that touch this vertex using the robust function.
+    std::vector<Face*> faces = getFacesOfVertex(v);
+
+    // Iterate through all the edges of those faces.
+    for (Face* f : faces) {
+        if (!f || !f->edge) continue;
+        HalfEdge* start_he = f->edge;
+        HalfEdge* current_he = start_he;
+        do {
+            // An edge is incident to v if it starts at v (outgoing)
+            // or if it ends at v (incoming). The end of `current_he` is the start of `current_he->next`.
+            if (current_he->origin == v || current_he->next->origin == v) {
+                incident_edges.push_back(current_he);
+            }
+            current_he = current_he->next;
+        } while (current_he != start_he);
+    }
+
+    // The above loop can add the same edge multiple times if it's an interior edge
+    // shared by two faces in the list. We must remove duplicates.
+    std::sort(incident_edges.begin(), incident_edges.end());
+    incident_edges.erase(std::unique(incident_edges.begin(), incident_edges.end()), incident_edges.end());
+
+    return incident_edges;
 }

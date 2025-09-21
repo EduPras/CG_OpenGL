@@ -31,7 +31,7 @@ int main() {
     if (!window) return -1;
 
     Mesh mesh;
-    if (!mesh.loadFromOBJ("assets/bunny.obj")) {
+    if (!mesh.loadFromOBJ("assets/star.obj")) {
         std::cerr << "Failed to load mesh, exiting." << std::endl;
         return -1;
     }
@@ -197,6 +197,16 @@ int main() {
             for (const auto& r : results) {
                 ImGui::Text("%s", r.c_str());
             }
+        }
+        
+        ImGui::Separator();
+        ImGui::Text("Render Mode");
+        if (ImGui::RadioButton("DDA Points", mesh.currentRenderMode == Mesh::RenderMode::POINTS)) {
+            mesh.setRenderMode(Mesh::RenderMode::POINTS);
+        }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("GL_LINES", mesh.currentRenderMode == Mesh::RenderMode::LINES)) {
+            mesh.setRenderMode(Mesh::RenderMode::LINES);
         }
         ImGui::End();
         

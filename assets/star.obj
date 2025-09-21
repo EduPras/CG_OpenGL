@@ -1,0 +1,28 @@
+# Complex 2D Star Shape for testing
+# All Z-coordinates are 0.0
+# 10 Vertices, 8 Faces (Triangles)
+
+# Vertices
+v 0.000 1.000 0.0  # v1 (Outer point)
+v 0.235 0.324 0.0  # v2 (Inner point)
+v 0.951 0.309 0.0  # v3 (Outer point)
+v 0.380 -0.124 0.0 # v4 (Inner point)
+v 0.588 -0.809 0.0 # v5 (Outer point)
+v 0.000 -0.400 0.0  # v6 (Inner point)
+v -0.588 -0.809 0.0 # v7 (Outer point)
+v -0.380 -0.124 0.0 # v8 (Inner point)
+v -0.951 0.309 0.0  # v9 (Outer point)
+v -0.235 0.324 0.0  # v10 (Inner point)
+
+# Faces (Triangulated with consistent CCW winding order)
+# Outer triangles
+f 1 2 10
+f 3 4 2
+f 5 6 4
+f 7 8 6
+f 9 10 8
+
+# Central pentagon (as 3 triangles)
+f 2 4 6
+f 2 6 8
+f 2 8 10

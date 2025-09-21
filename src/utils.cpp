@@ -2,6 +2,8 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <cmath>    
+#include <algorithm> 
 #include <glad/glad.h> // keep this
 #include <GLFW/glfw3.h> // keep this
 #include "../include/utils.hpp"
@@ -48,29 +50,40 @@ std::vector<std::vector<int>> loadOBJFaces(const std::string& filename) {
 
 
 // Generate points along a line segment using the DDA algorithm
-std::vector<Point> drawSegmentByLineEquation(float x1, float y1, float x2, float y2) {
+std::vector<Point> drawSegmentByLineEquation3D(const Point& p1, const Point& p2) {
     std::vector<Point> points;
-    // DDA algorithm: step along the axis with the largest difference
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    int steps = static_cast<int>(std::max(std::abs(dx), std::abs(dy)) * 100); // 100 points per unit
+    
+    float dx = p2.x - p1.x;
+    float dy = p2.y - p1.y;
+    float dz = p2.z - p1.z;
+
+    // Find the dimension with the greatest change to determine the number of steps
+    float max_delta = std::max(std::max(std::abs(dx), std::abs(dy)), std::abs(dz));
+    
+    // Increase density for a more solid line look. Adjust this multiplier as needed.
+    int steps = static_cast<int>(max_delta * 250);
+
     if (steps == 0) {
-        points.push_back({x1, y1, 0.0f});
+        points.push_back(p1);
         return points;
     }
+
     float x_inc = dx / steps;
     float y_inc = dy / steps;
-    float x = x1;
-    float y = y1;
+    float z_inc = dz / steps;
+
+    float x = p1.x;
+    float y = p1.y;
+    float z = p1.z;
+
     for (int i = 0; i <= steps; ++i) {
-        points.push_back({x, y, 0.0f});
+        points.push_back({x, y, z});
         x += x_inc;
         y += y_inc;
+        z += z_inc;
     }
     return points;
 }
-
-
 
 // GLFW framebuffer resize callback: update OpenGL viewport
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
