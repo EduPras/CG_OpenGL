@@ -20,6 +20,7 @@ target_include_directories(LearnOpenGl PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(
     LearnOpenGl PRIVATE
     glad_lib
+    imgui_lib
     glfw
     OpenGL::GL
 )

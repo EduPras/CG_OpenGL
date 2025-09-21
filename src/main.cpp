@@ -8,6 +8,10 @@
 #include <string>
 #include "../include/shader.hpp"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include "../include/utils.hpp"
 #include "../include/mesh.hpp"
 #include "../include/viewer.hpp"
@@ -72,6 +76,14 @@ int main() {
         return -1;
     }
 
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
     // --- Modularized version ---
     Mesh mesh;
     mesh.loadFromOBJ("assets/cube.obj");
@@ -97,13 +109,7 @@ int main() {
 
     visible_segments = mesh.points.size();
     selected_vertex = 0;
-
-    // test vertex
-    Vertex *first_v = &mesh.verticesHE[0];
-    std::cout << "First vertex position: (" << first_v->x << ", " << first_v->y << ", " << first_v->z << ")\n";
-
-    std::vector<Face*> adjacent_faces = getFacesOfVertex(first_v);
-    std::cout << "Adjacent faces to the first vertex: " << adjacent_faces.size() << "\n";
+    
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.f, 0.f, 0.f, 1.f);
@@ -131,10 +137,30 @@ int main() {
         glDrawArrays(GL_POINTS, 0, 1);
         glPointSize(1.0f);
 
+        // glfwSwapBuffers(window);
+        // glfwPollEvents();
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Your ImGui UI code here
+        ImGui::Begin("Mesh Info");
+        ImGui::Text("Vertices: %zu", mesh.points.size());
+        ImGui::Text("Edges: %zu", mesh.halfedgesHE.size());
+        ImGui::Text("Faces: %zu", mesh.faces.size());
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
     glfwTerminate();
     return 0;
 }
