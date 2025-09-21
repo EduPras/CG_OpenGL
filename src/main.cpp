@@ -74,7 +74,7 @@ int main() {
 
     // --- Modularized version ---
     Mesh mesh;
-    mesh.loadFromOBJ("assets/bunny.obj");
+    mesh.loadFromOBJ("assets/cube.obj");
     mesh.buildHalfEdge();
 
     Viewer viewer;
@@ -97,6 +97,13 @@ int main() {
 
     visible_segments = mesh.points.size();
     selected_vertex = 0;
+
+    // test vertex
+    Vertex *first_v = &mesh.verticesHE[0];
+    std::cout << "First vertex position: (" << first_v->x << ", " << first_v->y << ", " << first_v->z << ")\n";
+
+    std::vector<Face*> adjacent_faces = getFacesOfVertex(first_v);
+    std::cout << "Adjacent faces to the first vertex: " << adjacent_faces.size() << "\n";
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.f, 0.f, 0.f, 1.f);

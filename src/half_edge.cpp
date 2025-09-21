@@ -2,6 +2,8 @@
 #include <unordered_map>
 #include "../include/half_edge.hpp"
 #include <vector>
+#include <iostream>
+
 
 
 // Hash function for std::pair, used in unordered_map for edge lookup
@@ -38,19 +40,24 @@ void buildHalfEdgeMeshFromPointsAndFaces(
     for (size_t f = 0; f < face_indices.size(); ++f) {
         const auto& inds = face_indices[f];
         int n = inds.size();
+        // Store indices of half-edges for this face
+        std::vector<int> hedge_indices;
         for (int i = 0; i < n; ++i) {
             int curr = inds[i];
             int next = inds[(i+1)%n];
             HalfEdge* he = &halfedges[hedge_idx];
             he->origin = &vertices[curr];
             he->face = &faces[f];
-            // Next edge in the face loop
-            he->next = &halfedges[hedge_idx + (i+1)%n - i];
+            hedge_indices.push_back(hedge_idx);
             edge_map[{curr, next}] = he;
             hedge_idx++;
         }
+        // Assign next pointers for this face
+        for (int i = 0; i < n; ++i) {
+            halfedges[hedge_indices[i]].next = &halfedges[hedge_indices[(i+1)%n]];
+        }
         // Assign one edge to the face
-        faces[f].edge = &halfedges[hedge_idx-n];
+        faces[f].edge = &halfedges[hedge_indices[0]];
     }
 
     // Set twin pointers for each half-edge
@@ -62,9 +69,11 @@ void buildHalfEdgeMeshFromPointsAndFaces(
         }
     }
 
-    // Assign one outgoing edge to each vertex
+    // Assign one outgoing edge to each vertex (first found)
     for (auto& he : halfedges) {
-        he.origin->edge = &he;
+        if (!he.origin->edge) {
+            he.origin->edge = &he;
+        }
     }
 }
 
