@@ -17,8 +17,6 @@
 #include "../include/viewer.hpp"
 #include "../include/input.hpp"
 
-
-
 /**
  * @brief Number of visible segments in the mesh.
  */
@@ -76,19 +74,13 @@ int main() {
         return -1;
     }
 
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
-
     // --- Modularized version ---
     Mesh mesh;
     mesh.loadFromOBJ("assets/cube.obj");
     mesh.buildHalfEdge();
 
+    // Ensure cursor mode is normal for ImGui interactivity
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     Viewer viewer;
     viewer.setupGL();
     Shader shader("shaders/vertex_core.glsl", "shaders/fragment_core.glsl");
@@ -107,9 +99,16 @@ int main() {
         &pan_x, &pan_y
     );
 
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
     visible_segments = mesh.points.size();
     selected_vertex = 0;
-    
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.f, 0.f, 0.f, 1.f);
@@ -144,11 +143,70 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Your ImGui UI code here
-        ImGui::Begin("Mesh Info");
-        ImGui::Text("Vertices: %zu", mesh.points.size());
-        ImGui::Text("Edges: %zu", mesh.halfedgesHE.size());
-        ImGui::Text("Faces: %zu", mesh.faces.size());
+        // --- Mesh Operations UI ---
+        static int operation = 0;
+        const char* operations[] = {
+            "Faces of Vertex",
+            "Edges of Vertex",
+            "Adjacent Faces of Face",
+            "Adjacent Faces of Edge"
+        };
+        // ImGui::Begin("Mesh Operations");
+        ImGui::Begin("Mesh Operations", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Combo("Operation", &operation, operations, IM_ARRAYSIZE(operations));
+
+        static int selected_vertex = 0;
+        static int selected_face = 0;
+        static int selected_edge = 0;
+        static std::vector<std::string> results;
+
+        if (operation == 0) {
+            ImGui::SliderInt("Vertex", &selected_vertex, 0, (int)mesh.verticesHE.size() - 1);
+            if (ImGui::Button("Run")) {
+                results.clear();
+                auto faces = getFacesOfVertex(&mesh.verticesHE[selected_vertex]);
+                for (auto* f : faces) {
+                    int idx = (int)(f - &mesh.facesHE[0]);
+                    results.push_back("Face index: " + std::to_string(idx));
+                }
+            }
+        } else if (operation == 1) {
+            ImGui::SliderInt("Vertex", &selected_vertex, 0, (int)mesh.verticesHE.size() - 1);
+            if (ImGui::Button("Run")) {
+                results.clear();
+                auto edges = getEdgesOfVertex(&mesh.verticesHE[selected_vertex]);
+                for (auto* e : edges) {
+                    int idx = (int)(e - &mesh.halfedgesHE[0]);
+                    results.push_back("Edge index: " + std::to_string(idx));
+                }
+            }
+        } else if (operation == 2) {
+            ImGui::SliderInt("Face", &selected_face, 0, (int)mesh.facesHE.size() - 1);
+            if (ImGui::Button("Run")) {
+                results.clear();
+                auto adj = getAdjacentFacesOfFace(&mesh.facesHE[selected_face]);
+                for (auto* f : adj) {
+                    int idx = (int)(f - &mesh.facesHE[0]);
+                    results.push_back("Adjacent Face index: " + std::to_string(idx));
+                }
+            }
+        } else if (operation == 3) {
+            ImGui::SliderInt("Edge", &selected_edge, 0, (int)mesh.halfedgesHE.size() - 1);
+            if (ImGui::Button("Run")) {
+                results.clear();
+                auto adj = getAdjacentFacesOfEdge(&mesh.halfedgesHE[selected_edge]);
+                for (auto* f : adj) {
+                    int idx = (int)(f - &mesh.facesHE[0]);
+                    results.push_back("Adjacent Face index: " + std::to_string(idx));
+                }
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Results:");
+        for (const auto& r : results) {
+            ImGui::Text("%s", r.c_str());
+        }
         ImGui::End();
 
         ImGui::Render();

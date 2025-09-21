@@ -2,7 +2,7 @@
 #include <GLFW/glfw3.h>
 #include "mesh.hpp"
 #include "viewer.hpp"
-
+#include "imgui.h"
 
 /**
  * @brief Sets up all input callbacks for interactive mesh viewing.
@@ -34,3 +34,10 @@ void setupInputCallbacks(
     float* pan_y
 );
 
+
+inline bool shouldBlockInput() {
+    return ImGui::GetIO().WantCaptureMouse;
+}
+inline bool shouldBlockKeyboard() {
+    return ImGui::GetIO().WantCaptureKeyboard;
+}

@@ -86,7 +86,7 @@ GLFWwindow* setupGLFW(){
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "OBJ Line Viewer", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1080, 1080, "OBJ Line Viewer", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();

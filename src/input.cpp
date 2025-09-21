@@ -13,6 +13,7 @@ static float* g_pan_x = nullptr;
 static float* g_pan_y = nullptr;
 // Mouse scroll callback: zoom in/out by changing zoom_level
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    if (shouldBlockInput()) return;
     if (g_zoom_level) {
         if (yoffset > 0) *g_zoom_level *= 1.05f; // Zoom in
         if (yoffset < 0) *g_zoom_level /= 1.05f; // Zoom out
@@ -21,6 +22,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 
 // Mouse button callback: start/stop dragging on left mouse button
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    if (shouldBlockInput()) return;
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
             *g_dragging = true;
@@ -34,6 +36,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 // Mouse move callback: handle dragging for pan (with CTRL) or rotation (with axis)
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
+    if (shouldBlockInput()) return;
     if (*g_dragging) {
         // Check if CTRL is held for panning
         int ctrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
@@ -83,6 +86,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
 
 // Keyboard callback: select rotation axis (1=X, 2=Y, 3=Z), or clear on release
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (shouldBlockKeyboard()) return;
     if (action == GLFW_PRESS) {
         if (key == GLFW_KEY_1) *g_rotate_axis = 1;
         else if (key == GLFW_KEY_2) *g_rotate_axis = 2;
