@@ -5,6 +5,7 @@ A modular C++ OpenGL project for interactive mesh visualization, featuring a rob
 
 ## Summary
 
+- [Running](#running)
 - [Half-Edge Mesh: Logic and Math](#half-edge-mesh-logic-and-math)
 - [Transformations: Math and Logic](#transformations-math-and-logic)
 - [Shader Pipeline: How Rendering Works](#shader-pipeline-how-rendering-works)
@@ -13,6 +14,10 @@ A modular C++ OpenGL project for interactive mesh visualization, featuring a rob
 - [Building and Running](#building-and-running)
 - [References](#references)
 
+## Running
+```sh
+ASSET_FILE=bunny.obj docker compose up
+```
 
 ## Half-Edge Mesh: Logic and Math
 
