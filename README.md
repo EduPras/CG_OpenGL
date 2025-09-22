@@ -100,7 +100,7 @@ where $s$ is the zoom level (controlled by mouse scroll).
 x' = x + t_x 
 y' = y + t_y
 ```
-where $t_x$ and $t_y$ are the pan offsets (controlled by CTRL+mouse drag).
+where $t_x$ and $t_y$ are the pan offsets (controlled by SHIFT+mouse drag).
 
 All these transformations are applied in sequence to each vertex before rendering.
 
@@ -133,9 +133,6 @@ The project uses a modern OpenGL shader pipeline for rendering:
 ### mesh
 - Loads OBJ files, stores vertex and face data, and builds the half-edge mesh structure.
 
-### viewer
-- Sets up OpenGL context, manages VAO/VBO, and handles rendering and viewport transformations.
-
 ### input
 - Handles all user input (mouse, keyboard, scroll) and updates transformation state (rotation, zoom, pan).
 
@@ -151,9 +148,9 @@ The project uses a modern OpenGL shader pipeline for rendering:
 
 ## Interactive Controls
 
-- **Rotate**: Select axis (1=X, 2=Y, 3=Z) and drag mouse
+- **Rotate**: Drag mouse
 - **Zoom**: Mouse scroll
-- **Pan**: Hold CTRL and drag mouse
+- **Pan**: Hold SHIFT and drag mouse
 
 
 ## Building and Running
