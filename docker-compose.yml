@@ -1,0 +1,17 @@
+services:
+  cg_opengl:
+    build: .
+    image: cg_opengl:latest
+    container_name: cg_opengl
+    environment:
+      - DISPLAY=${DISPLAY}
+      - ASSET_FILE=star.obj
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./assets:/app/assets
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    network_mode: host
+    # Uncomment below if you want to run the app directly
+    command: /app/build/src/LearnOpenGl /app/assets/${ASSET_FILE}

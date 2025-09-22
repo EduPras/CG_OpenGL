@@ -7,7 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <algorithm> // For std::find
+#include <algorithm>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -26,12 +26,20 @@ float rotation_angle_x = 0.0f;
 glm::vec2 pan_offset = glm::vec2(0.0f, 0.0f);
 
 
-int main() {
+int main(int argc, char* argv[]) {
+    // -- Load file --
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+        return 1; 
+    }
+    std::string filename = argv[1]; 
+
+    // --- Setup OpenGL and ImGui ---
     GLFWwindow* window = setupGLFW();
     if (!window) return -1;
 
     Mesh mesh;
-    if (!mesh.loadFromOBJ("assets/star.obj")) {
+    if (!mesh.loadFromOBJ(filename)) {
         std::cerr << "Failed to load mesh, exiting." << std::endl;
         return -1;
     }
@@ -88,7 +96,7 @@ int main() {
 
         // --- 2. Draw the highlighted geometry in green ---
         if (!highlighted_vertices.empty()) {
-            // *** THE FIX: Disable depth testing to prevent Z-fighting ***
+            // *** Disable depth testing to ensure highlights are visible on top ***
             glDisable(GL_DEPTH_TEST);
 
             shader.setVec4("ourColor", glm::vec4(0.1f, 1.0f, 0.2f, 1.0f));
@@ -99,7 +107,6 @@ int main() {
             
             glDrawArrays(GL_LINES, 0, highlighted_vertices.size() / 3);
             glBindVertexArray(0);
-
             // *** Re-enable depth testing for the rest of the scene ***
             glEnable(GL_DEPTH_TEST);
         }
