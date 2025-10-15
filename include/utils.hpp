@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <glm/glm.hpp>
 
 struct GLFWwindow;
 
@@ -36,6 +37,17 @@ std::vector<Point> drawSegmentByLineEquation3D(const Point& p1, const Point& p2)
 std::vector<std::vector<int>> loadOBJFaces(const std::string& filename);
 
 /**
+ * @brief Projects a 3D point from world space to 2D screen space.
+ * * @param worldPos The 3D point in world space.
+ * @param view The camera's view matrix.
+ * @param projection The camera's projection matrix.
+ * @param windowWidth The width of the viewport/window in pixels.
+ * @param windowHeight The height of the viewport/window in pixels.
+ * @return The 2D screen coordinates of the projected point.
+ */
+// glm::vec2 projectWorldToScreen(glm::vec3 worldPos, const glm::mat4& view, const glm::mat4& projection, int windowWidth, int windowHeight);
+
+/**
  * @brief Sets up GLFW and OpenGL context.
  * @return Pointer to the created GLFW window.
  */
@@ -48,3 +60,11 @@ GLFWwindow* setupGLFW();
  * @param height New height.
  */
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+
+glm::vec2 projectWorldToScreen(
+    glm::vec3 worldPos, 
+    const glm::mat4& view, 
+    const glm::mat4& projection, 
+    int windowWidth, 
+    int windowHeight);
+

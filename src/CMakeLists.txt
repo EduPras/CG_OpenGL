@@ -8,6 +8,7 @@ add_executable(
     utils.cpp
     half_edge.cpp
     mesh.cpp
+    xiaolin_wu.cpp
     input.cpp
 )
 

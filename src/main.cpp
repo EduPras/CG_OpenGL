@@ -23,6 +23,7 @@
 float zoom_level = 1.0f;
 float rotation_angle_y = 0.0f;
 float rotation_angle_x = 0.0f;
+int WIDTH = 1080, HEIGHT = 1080;
 glm::vec2 pan_offset = glm::vec2(0.0f, 0.0f);
 
 
@@ -46,7 +47,8 @@ int main(int argc, char* argv[]) {
     mesh.buildHalfEdge();
     mesh.setupMesh();
 
-    Shader shader("shaders/vertex_core.glsl", "shaders/fragment_core.glsl");
+    Shader gpu_shader("shaders/vertex_core.glsl", "shaders/fragment_core.glsl");
+    Shader wu_shader("shaders/wu_line.vert", "shaders/wu_line.frag");
     setupInputCallbacks(window, &zoom_level, &rotation_angle_x, &rotation_angle_y, &pan_offset);
     
     // --- Setup for Highlight Rendering ---
@@ -77,29 +79,37 @@ int main(int argc, char* argv[]) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // Get MVP matrices
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float aspect_ratio = (height > 0) ? (float)width / (float)height : 1.0f;
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect_ratio, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(30.0f), aspect_ratio, 0.1f, 100.0f);
         glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(pan_offset.x, pan_offset.y, -3.0f / zoom_level));
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::rotate(model, rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::rotate(model, rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
-        glm::mat4 mvp = projection * view * model;
 
-        shader.activate();
-        shader.setMat4("mvp", mvp);
-
+        // Draw the mesh
         // --- 1. Draw the main mesh in white ---
-        shader.setVec4("ourColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-        mesh.draw();
+        if (mesh.currentRenderMode != Mesh::RenderMode::NONE){
+        // Defining shaders
+            gpu_shader.setMat4("u_model", model);
+            gpu_shader.setMat4("u_view", view);
+            gpu_shader.setMat4("u_projection", projection);
+            gpu_shader.setVec4("ourColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        
+            mesh.draw(view, projection, &gpu_shader, width, height);
+        }
+        else{
+            mesh.drawWithXiaolinWu(&wu_shader, model, view, projection, width, height);
+        }
 
         // --- 2. Draw the highlighted geometry in green ---
         if (!highlighted_vertices.empty()) {
             // *** Disable depth testing to ensure highlights are visible on top ***
             glDisable(GL_DEPTH_TEST);
 
-            shader.setVec4("ourColor", glm::vec4(0.1f, 1.0f, 0.2f, 1.0f));
+            gpu_shader.setVec4("ourColor", glm::vec4(0.1f, 1.0f, 0.2f, 1.0f));
             
             glBindVertexArray(highlightVAO);
             glBindBuffer(GL_ARRAY_BUFFER, highlightVBO);
@@ -215,6 +225,11 @@ int main(int argc, char* argv[]) {
         if (ImGui::RadioButton("GL_LINES", mesh.currentRenderMode == Mesh::RenderMode::LINES)) {
             mesh.setRenderMode(Mesh::RenderMode::LINES);
         }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("NONE", mesh.currentRenderMode == Mesh::RenderMode::NONE)) {
+            mesh.setRenderMode(Mesh::RenderMode::NONE);
+        }
+
         ImGui::End();
         
         ImGui::Render();

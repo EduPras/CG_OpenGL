@@ -6,7 +6,9 @@
 #include <algorithm> 
 #include <glad/glad.h> // keep this
 #include <GLFW/glfw3.h> // keep this
-#include "../include/utils.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include "utils.hpp"
 
 
 // Load vertex positions from an OBJ file (lines starting with 'v ')
@@ -90,6 +92,21 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
+glm::vec2 projectWorldToScreen(
+    glm::vec3 worldPos, const glm::mat4& view, const glm::mat4& projection, int windowWidth, int windowHeight) {
+    // Combine matrices and transform the 3D point to Clip Space
+    glm::vec4 clipCoords = projection * view * glm::vec4(worldPos, 1.0f);
+    // Perform perspective divide to get Normalized Device Coordinates (NDC)
+    glm::vec3 ndcCoords = glm::vec3(clipCoords) / clipCoords.w;
+    // Check if the point is behind the camera (clipped)
+    if (clipCoords.w < 0) {
+        return glm::vec2(NAN, NAN); // Or some other invalid value
+    }
+    // Perform viewport transform to get Screen Coordinates
+    float screenX = (ndcCoords.x + 1.0f) / 2.0f * windowWidth;
+    float screenY = (1.0f - ndcCoords.y) / 2.0f * windowHeight;
+    return glm::vec2(screenX, screenY);
+}
 
 // Set up GLFW and OpenGL context, return window pointer
 GLFWwindow* setupGLFW(){

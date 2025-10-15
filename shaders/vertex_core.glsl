@@ -3,12 +3,13 @@
 // Input vertex data (position)
 layout (location = 0) in vec3 aPos;
 
-// Uniforms are global variables passed from C++ to the shader
-// This matrix will contain our combined model, view, and projection transformations
-uniform mat4 mvp;
+
+uniform mat4 u_model;
+uniform mat4 u_view;
+uniform mat4 u_projection;
 
 void main()
 {
     // Transform the vertex position and output it
-    gl_Position = mvp * vec4(aPos, 1.0);
+    gl_Position = u_projection * u_view * u_model * vec4(aPos, 1.0);
 }

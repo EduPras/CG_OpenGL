@@ -66,6 +66,13 @@ public:
      * @param val Vector value to set.
      */
     void setVec4(const std::string& name, const glm::vec4& val);
+
+    /**
+     * @brief Sets a vec4 uniform in the shader.
+     * @param name Name of the uniform variable.
+     * @param val Vector value to set.
+     */
+    void setVec2(const std::string& name, const glm::vec2& val);
 };
 
 #endif
