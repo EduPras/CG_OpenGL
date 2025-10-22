@@ -77,12 +77,12 @@ int main(int argc, char* argv[]) {
         model = glm::rotate(model, rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::rotate(model, rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
 
-        // Draw the mesh
+        // Xiaolin wu needs special handling
         if (mesh.currentRenderMode != Mesh::RenderMode::XIAOLIN_WU) {
             gpu_shader.setMat4("u_model", model);
             gpu_shader.setMat4("u_view", view);
             gpu_shader.setMat4("u_projection", projection);
-            gpu_shader.setVec4("ourColor", glm::vec4(1.0f, 0.5f, 1.0f, 1.0f));
+            gpu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 1.0f, 1.0f));
             mesh.draw(view, projection, &gpu_shader, width, height);
         } else {
             wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
         // Draw highlighted geometry in green
         if (!guiState.highlighted_vertices.empty()) {
             glDisable(GL_DEPTH_TEST);
-            gpu_shader.setVec4("ourColor", glm::vec4(0.1f, 1.0f, 0.2f, 1.0f));
+            gpu_shader.setVec4("vertexColor", glm::vec4(0.1f, 1.0f, 0.2f, 1.0f));
             glBindVertexArray(highlightVAO);
             glBindBuffer(GL_ARRAY_BUFFER, highlightVBO);
             glBufferData(GL_ARRAY_BUFFER, guiState.highlighted_vertices.size() * sizeof(float), guiState.highlighted_vertices.data(), GL_DYNAMIC_DRAW);
