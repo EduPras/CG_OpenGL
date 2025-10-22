@@ -103,7 +103,6 @@ std::vector<Face*> getAdjacentFacesOfEdge(HalfEdge* e) {
 }
 
 
-// *** FIXED ROBUST VERSION ***
 // Traverses all faces around a vertex, even if there are boundaries.
 std::vector<Face*> getFacesOfVertex(Vertex* v) {
     std::vector<Face*> faces;
@@ -156,7 +155,6 @@ std::vector<Face*> getFacesOfVertex(Vertex* v) {
 }
 
 
-// *** FIXED ROBUST VERSION ***
 // Traverses all outgoing edges from a vertex, even if there are boundaries.
 std::vector<HalfEdge*> getEdgesOfVertex(Vertex* v) {
     std::vector<HalfEdge*> incident_edges;

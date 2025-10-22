@@ -21,14 +21,9 @@ struct InputState {
 static InputState input_state;
 
 
-// --- Callback Functions ---
-
-// Called when a mouse button is pressed or released
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    // --- NEW: Check if ImGui wants the mouse ---
     ImGuiIO& io = ImGui::GetIO();
     if (io.WantCaptureMouse) {
-        // ImGui is handling the mouse click, so our 3D viewport should ignore it.
         return;
     }
 
@@ -46,15 +41,13 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 // Called when the mouse cursor moves
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-    // --- NEW: Check if ImGui wants the mouse ---
     ImGuiIO& io = ImGui::GetIO();
     if (io.WantCaptureMouse) {
-        // ImGui is handling the mouse movement, so our 3D viewport should ignore it.
         return;
     }
 
     if (!input_state.is_dragging_left) {
-        return; // Do nothing if we're not dragging
+        return; 
     }
 
     // Calculate the change in mouse position from the last frame
@@ -89,10 +82,8 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
 
 // Called when the mouse wheel is scrolled
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    // --- NEW: Check if ImGui wants the mouse ---
     ImGuiIO& io = ImGui::GetIO();
     if (io.WantCaptureMouse) {
-        // ImGui is handling the scroll, so our 3D viewport should ignore it.
         return;
     }
 
@@ -108,7 +99,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 
 // Called when a key is pressed
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    // We can also check for keyboard capture if needed in the future
     ImGuiIO& io = ImGui::GetIO();
     if (io.WantCaptureKeyboard) {
         return;
@@ -118,9 +108,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, true);
     }
 }
-
-
-// --- Main Setup Function ---
 
 void setupInputCallbacks(GLFWwindow* window, float* zoom, float* rot_x, float* rot_y, glm::vec2* pan) {
     // Store the pointers to the variables in main.cpp

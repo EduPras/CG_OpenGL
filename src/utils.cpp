@@ -1,4 +1,4 @@
-
+#include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -130,4 +130,41 @@ GLFWwindow* setupGLFW(){
         // return -1;
     }
     return window;
+}
+
+// json util functions
+using json = nlohmann::json;
+
+void saveTransformState(const std::string& filename, const TransformState& state) {
+    json j;
+    j["zoom_level"] = state.zoom_level;
+    j["rotation_angle_x"] = state.rotation_angle_x;
+    j["rotation_angle_y"] = state.rotation_angle_y;
+    j["pov"] = state.pov;
+    j["pan_offset_x"] = state.pan_offset.x;
+    j["pan_offset_y"] = state.pan_offset.y;
+    std::ofstream out(filename);
+    if (out.is_open()) {
+        out << j.dump(4);
+        out.close();
+    }
+}
+
+bool loadTransformState(const std::string& filename, TransformState& state) {
+    std::ifstream in(filename);
+    if (!in.is_open()) return false;
+    json j;
+    in >> j;
+    in.close();
+    try {
+        state.zoom_level = j.at("zoom_level").get<float>();
+        state.rotation_angle_x = j.at("rotation_angle_x").get<float>();
+        state.rotation_angle_y = j.at("rotation_angle_y").get<float>();
+        state.pov = j.at("pov").get<float>();
+        state.pan_offset.x = j.at("pan_offset_x").get<float>();
+        state.pan_offset.y = j.at("pan_offset_y").get<float>();
+    } catch (...) {
+        return false;
+    }
+    return true;
 }

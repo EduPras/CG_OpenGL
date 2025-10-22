@@ -17,7 +17,7 @@ void shutdownImGui() {
     ImGui::DestroyContext();
 }
 
-void renderGui(GuiState& state, Mesh& mesh, float& pov) {
+void renderGui(GuiState& state, Mesh& mesh, TransformState* transformState) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -25,7 +25,10 @@ void renderGui(GuiState& state, Mesh& mesh, float& pov) {
     ImGui::Begin("Half-Edge Operations");
     const char* operations[] = { "Faces of Vertex", "Edges of Vertex", "Adjacent Faces of Face", "Adjacent Faces of Edge" };
     ImGui::Combo("Operation", &state.operation, operations, IM_ARRAYSIZE(operations));
-    ImGui::SliderFloat("POV Angle", &pov, 10.f, 90.0f);
+    ImGui::SliderFloat("POV Angle", &transformState->pov, 10.f, 90.0f);
+    if (ImGui::Button("Save state")) {
+        saveTransformState("state.json", *transformState);
+    }
 
     if (state.operation == 0 && !mesh.verticesHE.empty()) {
         ImGui::SliderInt("Vertex Index", &state.selected_vertex, 0, (int)mesh.verticesHE.size() - 1);

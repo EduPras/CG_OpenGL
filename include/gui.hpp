@@ -17,4 +17,4 @@ struct GuiState {
 
 void setupImGui(GLFWwindow* window);
 void shutdownImGui();
-void renderGui(GuiState& state, Mesh& mesh, float& pov);
+void renderGui(GuiState& state, Mesh& mesh, TransformState* transformState);

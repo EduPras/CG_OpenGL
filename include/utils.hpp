@@ -1,4 +1,8 @@
 #pragma once
+#include <glm/glm.hpp>
+#include <string>
+#include <glm/glm.hpp>
+#include <string>
 #include <vector>
 #include <string>
 #include <glm/glm.hpp>
@@ -68,3 +72,16 @@ glm::vec2 projectWorldToScreen(
     int windowWidth, 
     int windowHeight);
 
+struct TransformState {
+    float zoom_level = 1.0f;
+    float rotation_angle_x = 0.0f;
+    float rotation_angle_y = 0.0f;
+    float pov = 45.0f;
+    glm::vec2 pan_offset = glm::vec2(0.0f, 0.0f);
+};
+
+// Save transformation state to a file (JSON format)
+void saveTransformState(const std::string& filename, const TransformState& state);
+
+// Load transformation state from a file (JSON format)
+bool loadTransformState(const std::string& filename, TransformState& state);
