@@ -9,9 +9,8 @@
 #include <string>
 #include <algorithm>
 
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+
+#include "gui.hpp"
 
 #include "shader.hpp"
 #include "mesh.hpp"
@@ -49,6 +48,8 @@ int main(int argc, char* argv[]) {
 
     Shader gpu_shader("shaders/vertex_core.glsl", "shaders/fragment_core.glsl");
     Shader wu_shader("shaders/wu_line.vert", "shaders/wu_line.frag");
+
+    wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
     setupInputCallbacks(window, &zoom_level, &rotation_angle_x, &rotation_angle_y, &pan_offset);
     
     // --- Setup for Highlight Rendering ---
@@ -62,13 +63,12 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(0);
     glBindVertexArray(0);
 
-    std::vector<float> highlighted_vertices;
 
-    // Setup Dear ImGui
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    GuiState guiState;
+
+
+    // Setup Dear ImGui (moved to gui.cpp)
+    setupImGui(window);
 
     glEnable(GL_DEPTH_TEST);
     glLineWidth(2.5f); 
@@ -90,159 +90,38 @@ int main(int argc, char* argv[]) {
         model = glm::rotate(model, rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
 
         // Draw the mesh
-        // --- 1. Draw the main mesh in white ---
-        if (mesh.currentRenderMode != Mesh::RenderMode::NONE){
-        // Defining shaders
+        if (mesh.currentRenderMode != Mesh::RenderMode::NONE) {
             gpu_shader.setMat4("u_model", model);
             gpu_shader.setMat4("u_view", view);
             gpu_shader.setMat4("u_projection", projection);
-            gpu_shader.setVec4("ourColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-        
+            gpu_shader.setVec4("ourColor", glm::vec4(1.0f, 0.5f, 1.0f, 1.0f));
             mesh.draw(view, projection, &gpu_shader, width, height);
-        }
-        else{
+        } else {
+            wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
             mesh.drawWithXiaolinWu(&wu_shader, model, view, projection, width, height);
         }
 
-        // --- 2. Draw the highlighted geometry in green ---
-        if (!highlighted_vertices.empty()) {
-            // *** Disable depth testing to ensure highlights are visible on top ***
+        // Draw highlighted geometry in green
+        if (!guiState.highlighted_vertices.empty()) {
             glDisable(GL_DEPTH_TEST);
-
             gpu_shader.setVec4("ourColor", glm::vec4(0.1f, 1.0f, 0.2f, 1.0f));
-            
             glBindVertexArray(highlightVAO);
             glBindBuffer(GL_ARRAY_BUFFER, highlightVBO);
-            glBufferData(GL_ARRAY_BUFFER, highlighted_vertices.size() * sizeof(float), highlighted_vertices.data(), GL_DYNAMIC_DRAW);
-            
-            glDrawArrays(GL_LINES, 0, highlighted_vertices.size() / 3);
+            glBufferData(GL_ARRAY_BUFFER, guiState.highlighted_vertices.size() * sizeof(float), guiState.highlighted_vertices.data(), GL_DYNAMIC_DRAW);
+            glDrawArrays(GL_LINES, 0, guiState.highlighted_vertices.size() / 3);
             glBindVertexArray(0);
-            // *** Re-enable depth testing for the rest of the scene ***
             glEnable(GL_DEPTH_TEST);
         }
 
-        // --- ImGui Rendering ---
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::Begin("Half-Edge Operations");
-        static int operation = 0;
-        const char* operations[] = { "Faces of Vertex", "Edges of Vertex", "Adjacent Faces of Face", "Adjacent Faces of Edge" };
-        ImGui::Combo("Operation", &operation, operations, IM_ARRAYSIZE(operations));
-
-        static int selected_vertex = 0;
-        static int selected_face = 0;
-        static int selected_edge = 0;
-        static std::vector<std::string> results;
-
-        // --- IMGUI LOGIC WITH COMPLETE HIGHLIGHTING ---
-        if (operation == 0 && !mesh.verticesHE.empty()) { // Faces of Vertex
-            ImGui::SliderInt("Vertex Index", &selected_vertex, 0, (int)mesh.verticesHE.size() - 1);
-            if (ImGui::Button("Run Query")) {
-                results.clear();
-                highlighted_vertices.clear();
-                auto faces = getFacesOfVertex(&mesh.verticesHE[selected_vertex]);
-                for (auto* f : faces) {
-                    results.push_back("Face index: " + std::to_string(f - &mesh.facesHE[0]));
-                    HalfEdge* start_he = f->edge;
-                    HalfEdge* current_he = start_he;
-                    do {
-                        Vertex* v1 = current_he->origin;
-                        Vertex* v2 = current_he->next->origin;
-                        highlighted_vertices.insert(highlighted_vertices.end(), {v1->x, v1->y, v1->z, v2->x, v2->y, v2->z});
-                        current_he = current_he->next;
-                    } while (current_he != start_he);
-                }
-            }
-        } else if (operation == 1 && !mesh.verticesHE.empty()) { // Edges of Vertex
-            ImGui::SliderInt("Vertex Index", &selected_vertex, 0, (int)mesh.verticesHE.size() - 1);
-            if (ImGui::Button("Run Query")) {
-                results.clear();
-                highlighted_vertices.clear();
-                auto edges = getEdgesOfVertex(&mesh.verticesHE[selected_vertex]);
-                for (auto* e : edges) {
-                    results.push_back("Edge index: " + std::to_string(e - &mesh.halfedgesHE[0]));
-                    Vertex* v1 = e->origin;
-                    Vertex* v2 = e->next->origin;
-                    highlighted_vertices.insert(highlighted_vertices.end(), {v1->x, v1->y, v1->z, v2->x, v2->y, v2->z});
-                }
-            }
-        } else if (operation == 2 && !mesh.facesHE.empty()) { // Adjacent Faces of Face
-             ImGui::SliderInt("Face Index", &selected_face, 0, (int)mesh.facesHE.size() - 1);
-             if (ImGui::Button("Run Query")) {
-                results.clear();
-                highlighted_vertices.clear();
-                auto adj_faces = getAdjacentFacesOfFace(&mesh.facesHE[selected_face]);
-                for (auto* f : adj_faces) {
-                    results.push_back("Adjacent Face: " + std::to_string(f - &mesh.facesHE[0]));
-                    HalfEdge* start_he = f->edge;
-                    HalfEdge* current_he = start_he;
-                    do {
-                        Vertex* v1 = current_he->origin;
-                        Vertex* v2 = current_he->next->origin;
-                        highlighted_vertices.insert(highlighted_vertices.end(), {v1->x, v1->y, v1->z, v2->x, v2->y, v2->z});
-                        current_he = current_he->next;
-                    } while (current_he != start_he);
-                }
-            }
-        } else if (operation == 3 && !mesh.halfedgesHE.empty()) { // Adjacent Faces of Edge
-            ImGui::SliderInt("Edge Index", &selected_edge, 0, (int)mesh.halfedgesHE.size() - 1);
-            if (ImGui::Button("Run Query")) {
-                results.clear();
-                highlighted_vertices.clear();
-                auto adj_faces = getAdjacentFacesOfEdge(&mesh.halfedgesHE[selected_edge]);
-                for(auto* f : adj_faces) {
-                    results.push_back("Adjacent Face: " + std::to_string(f - &mesh.facesHE[0]));
-                    HalfEdge* start_he = f->edge;
-                    HalfEdge* current_he = start_he;
-                    do {
-                        Vertex* v1 = current_he->origin;
-                        Vertex* v2 = current_he->next->origin;
-                        highlighted_vertices.insert(highlighted_vertices.end(), {v1->x, v1->y, v1->z, v2->x, v2->y, v2->z});
-                        current_he = current_he->next;
-                    } while (current_he != start_he);
-                }
-            }
-        }
-
-        ImGui::Separator();
-        ImGui::Text("Results:");
-        if (results.empty()) {
-            ImGui::Text("None");
-        } else {
-            for (const auto& r : results) {
-                ImGui::Text("%s", r.c_str());
-            }
-        }
-        
-        ImGui::Separator();
-        ImGui::Text("Render Mode");
-        if (ImGui::RadioButton("DDA Points", mesh.currentRenderMode == Mesh::RenderMode::POINTS)) {
-            mesh.setRenderMode(Mesh::RenderMode::POINTS);
-        }
-        ImGui::SameLine();
-        if (ImGui::RadioButton("GL_LINES", mesh.currentRenderMode == Mesh::RenderMode::LINES)) {
-            mesh.setRenderMode(Mesh::RenderMode::LINES);
-        }
-        ImGui::SameLine();
-        if (ImGui::RadioButton("NONE", mesh.currentRenderMode == Mesh::RenderMode::NONE)) {
-            mesh.setRenderMode(Mesh::RenderMode::NONE);
-        }
-
-        ImGui::End();
-        
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // ImGui rendering (now in gui.cpp)
+        renderGui(guiState, mesh);
         glfwSwapBuffers(window);
     }
 
     // Cleanup
     glDeleteVertexArrays(1, &highlightVAO);
     glDeleteBuffers(1, &highlightVBO);
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    shutdownImGui();
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;

@@ -10,6 +10,7 @@ add_executable(
     mesh.cpp
     xiaolin_wu.cpp
     input.cpp
+    gui.cpp
 )
 
 
