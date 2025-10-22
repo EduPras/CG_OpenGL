@@ -27,7 +27,7 @@ public:
     enum RenderMode {
         LINES,
         POINTS,
-        NONE
+        XIAOLIN_WU
     };
     // Raw data loaded from the OBJ file
     std::vector<Point> points;

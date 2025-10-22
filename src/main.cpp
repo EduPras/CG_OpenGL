@@ -1,7 +1,7 @@
+// Standard Libraries
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -9,32 +9,29 @@
 #include <string>
 #include <algorithm>
 
-
+// Project Headers
 #include "gui.hpp"
-
 #include "shader.hpp"
 #include "mesh.hpp"
 #include "input.hpp"
 #include "half_edge.hpp"
 #include "utils.hpp"
 
-// --- Global variables for camera and input state ---
 float zoom_level = 1.0f;
 float rotation_angle_y = 0.0f;
 float rotation_angle_x = 0.0f;
+float pov = 45.0f;
 int WIDTH = 1080, HEIGHT = 1080;
 glm::vec2 pan_offset = glm::vec2(0.0f, 0.0f);
 
 
 int main(int argc, char* argv[]) {
-    // -- Load file --
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
         return 1; 
     }
     std::string filename = argv[1]; 
 
-    // --- Setup OpenGL and ImGui ---
     GLFWwindow* window = setupGLFW();
     if (!window) return -1;
 
@@ -52,7 +49,6 @@ int main(int argc, char* argv[]) {
     wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
     setupInputCallbacks(window, &zoom_level, &rotation_angle_x, &rotation_angle_y, &pan_offset);
     
-    // --- Setup for Highlight Rendering ---
     GLuint highlightVAO, highlightVBO;
     glGenVertexArrays(1, &highlightVAO);
     glGenBuffers(1, &highlightVBO);
@@ -63,16 +59,8 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(0);
     glBindVertexArray(0);
 
-
     GuiState guiState;
-
-
-    // Setup Dear ImGui (moved to gui.cpp)
     setupImGui(window);
-
-    glEnable(GL_DEPTH_TEST);
-    glLineWidth(2.5f); 
-    glEnable(GL_LINE_SMOOTH);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -83,14 +71,14 @@ int main(int argc, char* argv[]) {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float aspect_ratio = (height > 0) ? (float)width / (float)height : 1.0f;
-        glm::mat4 projection = glm::perspective(glm::radians(30.0f), aspect_ratio, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(pov), aspect_ratio, 0.1f, 100.0f);
         glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(pan_offset.x, pan_offset.y, -3.0f / zoom_level));
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::rotate(model, rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::rotate(model, rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
 
         // Draw the mesh
-        if (mesh.currentRenderMode != Mesh::RenderMode::NONE) {
+        if (mesh.currentRenderMode != Mesh::RenderMode::XIAOLIN_WU) {
             gpu_shader.setMat4("u_model", model);
             gpu_shader.setMat4("u_view", view);
             gpu_shader.setMat4("u_projection", projection);
@@ -113,8 +101,7 @@ int main(int argc, char* argv[]) {
             glEnable(GL_DEPTH_TEST);
         }
 
-        // ImGui rendering (now in gui.cpp)
-        renderGui(guiState, mesh);
+        renderGui(guiState, mesh, pov);
         glfwSwapBuffers(window);
     }
 
