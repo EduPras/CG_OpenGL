@@ -1,10 +1,9 @@
-#include "../include/utils.hpp"
 #include <unordered_map>
-#include "../include/half_edge.hpp"
 #include <vector>
 #include <iostream>
 #include <algorithm>
-
+#include "../include/half_edge.hpp"
+#include "../include/utils.hpp"
 
 // Hash function for std::pair, used in unordered_map for edge lookup
 struct pair_hash {

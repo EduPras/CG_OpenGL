@@ -1,12 +1,14 @@
 
-#include <string>
-#ifndef HALF_EDGE_HPP
-#define HALF_EDGE_HPP
+/**
+ * @file half_edge.hpp
+ * @brief HalfEdge implementation.
+ */
 
+#pragma once
+#include <string>
 #include <vector>
 #include <set>
 #include "utils.hpp"
-
 
 // Forward declarations to resolve circular dependencies
 struct HalfEdge;
@@ -90,5 +92,3 @@ void buildHalfEdgeMeshFromPointsAndFaces(
     std::vector<HalfEdge>& halfedges,
     std::vector<Face>& faces
 );
-
-#endif // HALF_EDGE_HPP

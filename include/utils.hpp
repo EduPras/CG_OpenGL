@@ -1,3 +1,7 @@
+/**
+ * @file utils.hpp
+ * @brief Utility functions and data structures.
+ */
 #pragma once
 #include <glm/glm.hpp>
 #include <string>

@@ -1,7 +1,8 @@
 #include <vector>
 #include <cmath>
-#include <algorithm> // For std::swap
+#include <algorithm> 
 #include <glm/glm.hpp>
+
 #include "xiaolin_wu.hpp"
 
 std::vector<Pixel> drawWuLine2D(glm::vec2 p0, glm::vec2 p1) {

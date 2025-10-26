@@ -1,3 +1,7 @@
+/**
+ * @file input.hpp
+ * @brief Input and callbacks from inputs.
+ */
 #pragma once
 #include <glm/glm.hpp>
 

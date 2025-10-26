@@ -73,10 +73,10 @@ int main(int argc, char* argv[]) {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         float aspect_ratio = (height > 0) ? (float)width / (float)height : 1.0f;
-    projection = glm::perspective(glm::radians(transformState.pov), aspect_ratio, 0.1f, 100.0f);
-    view = glm::translate(glm::mat4(1.0f), glm::vec3(transformState.pan_offset.x, transformState.pan_offset.y, -3.0f / transformState.zoom_level));
-    model = glm::rotate(model, transformState.rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
-    model = glm::rotate(model, transformState.rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
+        projection = glm::perspective(glm::radians(transformState.pov), aspect_ratio, 0.1f, 100.0f);
+        view = glm::translate(glm::mat4(1.0f), glm::vec3(transformState.pan_offset.x, transformState.pan_offset.y, -3.0f / transformState.zoom_level));
+        model = glm::rotate(model, transformState.rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, transformState.rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
 
         // Xiaolin wu needs special handling
         if (mesh.currentRenderMode != Mesh::RenderMode::XIAOLIN_WU) {
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
             glEnable(GL_DEPTH_TEST);
         }
 
-    renderGui(guiState, mesh, &transformState);
+        renderGui(guiState, mesh, &transformState);
         glfwSwapBuffers(window);
     }
 

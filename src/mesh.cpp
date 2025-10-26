@@ -1,11 +1,12 @@
-#include "mesh.hpp"
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+
 #include "utils.hpp"
 #include "xiaolin_wu.hpp"
+#include "mesh.hpp"
 
 // Constructor initializes all OpenGL handles to 0 and sets default render mode
 Mesh::Mesh() : 

@@ -1,3 +1,8 @@
+/**
+ * @file xiaolin_wu.hpp
+ * @brief Implements Xiaolin Wu's anti-aliased line drawing algorithm.
+ */
+#pragma once
 #include <vector>
 #include <cmath>
 #include <algorithm> // For std::swap

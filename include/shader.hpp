@@ -1,7 +1,8 @@
-
-#ifndef SHADER_HPP
-#define SHADER_HPP
-
+/**
+ * @file shader.hpp
+ * @brief Manages OpenGL shader programs.
+ */
+#pragma once
 #include <string>
 #include <glm/glm.hpp>
 
@@ -75,4 +76,4 @@ public:
     void setVec2(const std::string& name, const glm::vec2& val);
 };
 
-#endif
+

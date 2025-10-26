@@ -1,9 +1,9 @@
-#include "input.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include "imgui.h"
 
+#include "input.hpp"
 
 // We store pointers to the variables in main.cpp that we need to modify.
 struct InputState {
