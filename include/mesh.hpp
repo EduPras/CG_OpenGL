@@ -29,8 +29,22 @@ class Mesh {
         enum RenderMode {
             LINES,
             POINTS,
-            XIAOLIN_WU
+            XIAOLIN_WU,
+            BRESENHAM
         };
+    // For Bresenham rendering
+    std::vector<WuVertex> bresenham_vertex_buffer;
+    unsigned int bresenham_point_count = 0;
+
+        // If BRESENHAM use this function
+        void drawWithBresenham(
+            Shader* shader,
+            const glm::mat4& model,
+            const glm::mat4& view,
+            const glm::mat4& projection,
+            int screenWidth,
+            int screenHeight
+        );
         // Raw data loaded from the OBJ file
         std::vector<Point> points;
         std::vector<std::vector<int>> face_indices;

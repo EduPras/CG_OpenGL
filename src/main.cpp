@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     if (!window) return -1;
 
 
-    // Try to load previous transform state
+    // Previous transform state
     loadTransformState("state.json", transformState);
 
     Mesh mesh;
@@ -75,20 +75,23 @@ int main(int argc, char* argv[]) {
         float aspect_ratio = (height > 0) ? (float)width / (float)height : 1.0f;
         projection = glm::perspective(glm::radians(transformState.pov), aspect_ratio, 0.1f, 100.0f);
         view = glm::translate(glm::mat4(1.0f), glm::vec3(transformState.pan_offset.x, transformState.pan_offset.y, -3.0f / transformState.zoom_level));
-    model = glm::rotate(model, transformState.rotation_angle_z, glm::vec3(0.0f, 0.0f, 1.0f));
-    model = glm::rotate(model, transformState.rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
-    model = glm::rotate(model, transformState.rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, transformState.rotation_angle_z, glm::vec3(0.0f, 0.0f, 1.0f));
+        model = glm::rotate(model, transformState.rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, transformState.rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
 
-        // Xiaolin wu needs special handling
-        if (mesh.currentRenderMode != Mesh::RenderMode::XIAOLIN_WU) {
+        // Render based on selected mode
+        if (mesh.currentRenderMode == Mesh::RenderMode::XIAOLIN_WU) {
+            wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
+            mesh.drawWithXiaolinWu(&wu_shader, model, view, projection, width, height);
+        } else if (mesh.currentRenderMode == Mesh::RenderMode::BRESENHAM) {
+            wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+            mesh.drawWithBresenham(&wu_shader, model, view, projection, width, height);
+        } else {
             gpu_shader.setMat4("u_model", model);
             gpu_shader.setMat4("u_view", view);
             gpu_shader.setMat4("u_projection", projection);
             gpu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 1.0f, 1.0f));
             mesh.draw(view, projection, &gpu_shader, width, height);
-        } else {
-            wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
-            mesh.drawWithXiaolinWu(&wu_shader, model, view, projection, width, height);
         }
 
         // Draw highlighted geometry in green

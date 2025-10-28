@@ -121,6 +121,10 @@ void renderGui(GuiState& state, Mesh& mesh, TransformState* transformState) {
     if (ImGui::RadioButton("XIAOLIN_WU", mesh.currentRenderMode == Mesh::RenderMode::XIAOLIN_WU)) {
         mesh.setRenderMode(Mesh::RenderMode::XIAOLIN_WU);
     }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("BRESENHAM", mesh.currentRenderMode == Mesh::RenderMode::BRESENHAM)) {
+        mesh.setRenderMode(Mesh::RenderMode::BRESENHAM);
+    }
     ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

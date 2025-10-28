@@ -6,7 +6,52 @@
 
 #include "utils.hpp"
 #include "xiaolin_wu.hpp"
+#include "bresenham.hpp"
 #include "mesh.hpp"
+
+// Bresenham rendering for 2D lines with 3D projection
+void Mesh::drawWithBresenham(
+    Shader* shader,
+    const glm::mat4& model,
+    const glm::mat4& view,
+    const glm::mat4& projection,
+    int screenWidth,
+    int screenHeight
+) {
+    bresenham_vertex_buffer.clear();
+    glm::vec4 lineColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    for (const auto& edge : edge_indices) {
+        glm::vec3 p1_local = {verticesHE[edge.first].x, verticesHE[edge.first].y, verticesHE[edge.first].z};
+        glm::vec3 p2_local = {verticesHE[edge.second].x, verticesHE[edge.second].y, verticesHE[edge.second].z};
+        glm::vec3 p1_world = glm::vec3(model * glm::vec4(p1_local, 1.0f));
+        glm::vec3 p2_world = glm::vec3(model * glm::vec4(p2_local, 1.0f));
+        std::vector<glm::ivec2> points = bresenhamLine(p1_world, p2_world, screenWidth, screenHeight, projection, view, glm::mat4(1.0f));
+        for (const auto& pt : points) {
+            WuVertex v;
+            v.position = glm::vec2(pt.x, pt.y);
+            v.color = lineColor;
+            bresenham_vertex_buffer.push_back(v);
+        }
+    }
+    bresenham_point_count = bresenham_vertex_buffer.size();
+    if (bresenham_point_count > 0) {
+        shader->activate();
+        shader->setVec2("u_screenSize", {screenWidth, screenHeight});
+        glDisable(GL_DEPTH_TEST);
+        // Use VAO_wu/VBO_wu for simplicity (same as Wu)
+        glBindVertexArray(VAO_wu);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_wu);
+        if (bresenham_point_count > wu_vbo_allocated_size) {
+            wu_vbo_allocated_size = bresenham_point_count * 1.5;
+            glBufferData(GL_ARRAY_BUFFER, wu_vbo_allocated_size * sizeof(WuVertex), bresenham_vertex_buffer.data(), GL_DYNAMIC_DRAW);
+        } else {
+            glBufferSubData(GL_ARRAY_BUFFER, 0, bresenham_point_count * sizeof(WuVertex), bresenham_vertex_buffer.data());
+        }
+        glDrawArrays(GL_POINTS, 0, bresenham_point_count);
+        glBindVertexArray(0);
+        glEnable(GL_DEPTH_TEST);
+    }
+}
 
 // Constructor initializes all OpenGL handles to 0 and sets default render mode
 Mesh::Mesh() : 
@@ -243,7 +288,6 @@ void Mesh::drawWithXiaolinWu(Shader* shader,
     }
 }
 
-// This function now checks the current rendering mode and issues the appropriate draw call.
 void Mesh::draw(glm::mat4& view, glm::mat4& projection, Shader *shader, int screenWidth, int screenHeight) {
     setShader(shader);
     if (currentRenderMode == LINES) {
