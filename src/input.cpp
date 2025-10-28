@@ -13,6 +13,7 @@ enum class RotationAxis {
     Z
 };
 
+
 struct InputState {
     float* zoom_level;
     float* rotation_angle_x;
@@ -25,10 +26,31 @@ struct InputState {
     double last_mouse_y = 0.0;
 
     RotationAxis rotation_axis = RotationAxis::Y;
+
+    // Shear mode state
+    bool shear_mode = false;
+    float shear_value = 0.0f;
 };
 
 // A single global instance of our input state
 static InputState input_state;
+
+// Shear state API
+bool isShearModeActive() {
+    return input_state.shear_mode;
+}
+
+float getShearValue() {
+    return input_state.shear_value;
+}
+
+void resetShear() {
+    input_state.shear_value = 0.0f;
+}
+
+void setShearValue(float value) {
+    input_state.shear_value = value;
+}
 
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
@@ -129,12 +151,29 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, true);
     }
     if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_X) {
-            input_state.rotation_axis = RotationAxis::X;
-        } else if (key == GLFW_KEY_Y) {
-            input_state.rotation_axis = RotationAxis::Y;
-        } else if (key == GLFW_KEY_R) {
-            input_state.rotation_axis = RotationAxis::Z;
+        if (key == GLFW_KEY_S) {
+            input_state.shear_mode = !input_state.shear_mode;
+            if (!input_state.shear_mode) {
+                // Optionally reset shear value when exiting shear mode
+                // input_state.shear_value = 0.0f;
+            }
+        } else if (input_state.shear_mode) {
+            // Handle shearing with left/right arrows
+            float shear_step = 0.05f;
+            if (key == GLFW_KEY_LEFT) {
+                input_state.shear_value -= shear_step;
+            } else if (key == GLFW_KEY_RIGHT) {
+                input_state.shear_value += shear_step;
+            }
+        } else {
+            // Only allow rotation axis switching if not in shear mode
+            if (key == GLFW_KEY_X) {
+                input_state.rotation_axis = RotationAxis::X;
+            } else if (key == GLFW_KEY_Y) {
+                input_state.rotation_axis = RotationAxis::Y;
+            } else if (key == GLFW_KEY_R) {
+                input_state.rotation_axis = RotationAxis::Z;
+            }
         }
     }
 }

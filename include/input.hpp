@@ -10,6 +10,13 @@ struct GLFWwindow;
 
 // Sets up all the necessary input callbacks for the GLFW window.
 // It takes pointers to the main application's state variables that control the camera.
+
+// Shear state accessors
+bool isShearModeActive();
+float getShearValue();
+void resetShear();
+void setShearValue(float value);
+
 void setupInputCallbacks(
     GLFWwindow* window,
     float* zoom,
