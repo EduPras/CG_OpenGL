@@ -15,5 +15,6 @@ void setupInputCallbacks(
     float* zoom,
     float* rot_x,
     float* rot_y,
+    float* rot_z,
     glm::vec2* pan
 );

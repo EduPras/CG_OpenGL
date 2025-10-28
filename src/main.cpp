@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     Shader wu_shader("shaders/wu_line.vert", "shaders/wu_line.frag");
 
     wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
-    setupInputCallbacks(window, &transformState.zoom_level, &transformState.rotation_angle_x, &transformState.rotation_angle_y, &transformState.pan_offset);
+    setupInputCallbacks(window, &transformState.zoom_level, &transformState.rotation_angle_x, &transformState.rotation_angle_y, &transformState.rotation_angle_z,  &transformState.pan_offset);
     
     GLuint highlightVAO, highlightVBO;
     glGenVertexArrays(1, &highlightVAO);
@@ -75,8 +75,9 @@ int main(int argc, char* argv[]) {
         float aspect_ratio = (height > 0) ? (float)width / (float)height : 1.0f;
         projection = glm::perspective(glm::radians(transformState.pov), aspect_ratio, 0.1f, 100.0f);
         view = glm::translate(glm::mat4(1.0f), glm::vec3(transformState.pan_offset.x, transformState.pan_offset.y, -3.0f / transformState.zoom_level));
-        model = glm::rotate(model, transformState.rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, transformState.rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, transformState.rotation_angle_z, glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::rotate(model, transformState.rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::rotate(model, transformState.rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
 
         // Xiaolin wu needs special handling
         if (mesh.currentRenderMode != Mesh::RenderMode::XIAOLIN_WU) {
