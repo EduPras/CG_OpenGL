@@ -15,6 +15,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+struct ViewportRect {
+    int x_min, y_min, x_max, y_max;
+};
+
 struct WuVertex {
     glm::vec2 position; // 2D screen position
     glm::vec4 color;    // Color with intensity in alpha
@@ -80,11 +84,17 @@ class Mesh {
             const glm::mat4& view,
             const glm::mat4& projection,
             int screenWidth,
-            int screenHeight
+            int screenHeight,
+            const glm::vec4& lineColor,
+            const ViewportRect& viewport
         );
         const std::string& getName() const { return name; }
     // Project all mesh vertices to screen space
     std::vector<glm::vec2> projectToScreenSpace(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection, int screenWidth, int screenHeight);
-    // Clip all mesh edges to the viewport, return a list of visible edge segments (in screen space)
-    std::vector<std::pair<glm::vec2, glm::vec2>> clipToViewport(const std::vector<glm::vec2>& screenVerts, int screenWidth, int screenHeight);
+    struct ClipResult {
+        std::vector<std::pair<glm::vec2, glm::vec2>> visibleEdges;
+        std::vector<std::pair<glm::vec2, glm::vec2>> boundarySegments;
+    };
+    // Clip all mesh edges to the viewport, return both visible edge segments and boundary segments (in screen space)
+    ClipResult clipToViewport(const std::vector<glm::vec2>& screenVerts, const ViewportRect& viewport);
 };

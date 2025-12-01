@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <imgui.h>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -18,8 +19,13 @@
 #include "utils.hpp"
 
 
+
 TransformState transformState;
 int WIDTH = 1080, HEIGHT = 1080;
+
+// Viewport rectangle (for clipping), defined as (x_min, y_min, x_max, y_max) in screen coordinates
+// Default: 100px margin from each window edge
+ViewportRect viewportRect = {100, 100, WIDTH - 100, HEIGHT - 100};
 
 
 // Helper to load a mesh from file and add to vectors
@@ -85,6 +91,15 @@ int main(int argc, char* argv[]) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // Update viewportRect in case window size changed
+        int overlay_width, overlay_height;
+        glfwGetFramebufferSize(window, &overlay_width, &overlay_height);
+        int margin = 100;
+        viewportRect.x_min = margin;
+        viewportRect.y_min = margin;
+        viewportRect.x_max = overlay_width - margin;
+        viewportRect.y_max = overlay_height - margin;
+
         // Get MVP matrices
         glm::mat4 model, view, projection;
         int width, height;
@@ -111,16 +126,28 @@ int main(int argc, char* argv[]) {
             // Always apply per-object transform
             model = model * objects[i].objectTransform;
 
-            if ((int)i == guiState.selected_object && !isViewportMode()) {
-                wu_shader.setVec4("vertexColor", glm::vec4(0.2f, 1.0f, 0.2f, 1.0f)); // green
-            } else {
-                wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f)); // default
-            }
-            objects[i].drawWithXiaolinWu(&wu_shader, model, view, projection, width, height);
+            glm::vec4 objColor = ((int)i == guiState.selected_object && !isViewportMode())
+                ? glm::vec4(0.2f, 1.0f, 0.2f, 1.0f) // green
+                : glm::vec4(1.0f, 0.5f, 0.5f, 1.0f); // default
+            wu_shader.setVec4("vertexColor", objColor);
+            objects[i].drawWithXiaolinWu(&wu_shader, model, view, projection, width, height, objColor, viewportRect);
         }
 
         // Pass selected object to GUI (for future selection logic)
         renderGui(guiState, objects[guiState.selected_object], &transformState);
+
+
+        // Draw viewport rectangle overlay using ImGui
+        ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+        ImVec2 p1 = ImVec2((float)viewportRect.x_min, (float)viewportRect.y_min);
+        ImVec2 p2 = ImVec2((float)viewportRect.x_max, (float)viewportRect.y_min);
+        ImVec2 p3 = ImVec2((float)viewportRect.x_max, (float)viewportRect.y_max);
+        ImVec2 p4 = ImVec2((float)viewportRect.x_min, (float)viewportRect.y_max);
+        draw_list->AddLine(p1, p2, IM_COL32(255, 255, 0, 255), 3.0f);
+        draw_list->AddLine(p2, p3, IM_COL32(255, 255, 0, 255), 3.0f);
+        draw_list->AddLine(p3, p4, IM_COL32(255, 255, 0, 255), 3.0f);
+        draw_list->AddLine(p4, p1, IM_COL32(255, 255, 0, 255), 3.0f);
+
         glfwSwapBuffers(window);
     }
 

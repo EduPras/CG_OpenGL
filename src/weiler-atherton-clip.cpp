@@ -69,41 +69,54 @@ WA_ClipResult weiler_atherton_clip(const WA_Polygon& poly, const WA_Viewport& vp
     WA_Polygon out = poly;
     std::vector<std::pair<WA_Point, WA_Point>> boundary_segments;
 
-    // Helper lambda to collect boundary segments
-    auto collect_boundary = [&](const WA_Polygon& before, const WA_Polygon& after, float edge, bool vertical, bool inside_less) {
-        size_t n = before.size();
-        for (size_t i = 0, j = 0; i < after.size(); ++i) {
-            const WA_Point& curr = after[i];
-            const WA_Point& prev = after[(i + after.size() - 1) % after.size()];
-            // If the segment is exactly on the boundary, add it
+    // Helper lambda to collect boundary segments as a polyline
+    auto collect_boundary = [&](const WA_Polygon& poly, float edge, bool vertical) {
+        std::vector<WA_Point> boundary_points;
+        for (const auto& pt : poly) {
             if (vertical) {
-                if (std::abs(curr.x - edge) < 1e-3 && std::abs(prev.x - edge) < 1e-3) {
-                    boundary_segments.emplace_back(prev, curr);
-                }
+                if (std::abs(pt.x - edge) < 1e-3) boundary_points.push_back(pt);
             } else {
-                if (std::abs(curr.y - edge) < 1e-3 && std::abs(prev.y - edge) < 1e-3) {
-                    boundary_segments.emplace_back(prev, curr);
-                }
+                if (std::abs(pt.y - edge) < 1e-3) boundary_points.push_back(pt);
             }
+        }
+        // Add as consecutive segments
+        for (size_t i = 0; i + 1 < boundary_points.size(); ++i) {
+            boundary_segments.emplace_back(boundary_points[i], boundary_points[i + 1]);
         }
     };
 
-    // Left
-    WA_Polygon before = out;
-    out = wa_clip_edge(out, vp.xmin, true, true);
-    collect_boundary(before, out, vp.xmin, true, true);
-    // Right
-    before = out;
-    out = wa_clip_edge(out, vp.xmax, true, false);
-    collect_boundary(before, out, vp.xmax, true, false);
-    // Bottom
-    before = out;
-    out = wa_clip_edge(out, vp.ymin, false, true);
-    collect_boundary(before, out, vp.ymin, false, true);
-    // Top
-    before = out;
-    out = wa_clip_edge(out, vp.ymax, false, false);
-    collect_boundary(before, out, vp.ymax, false, false);
+        // Special handling for line segments (2-point input)
+        if (poly.size() == 2) {
+            WA_Polygon clipped = poly;
+            clipped = wa_clip_edge(clipped, vp.xmin, true, true);
+            clipped = wa_clip_edge(clipped, vp.xmax, true, false);
+            clipped = wa_clip_edge(clipped, vp.ymin, false, true);
+            clipped = wa_clip_edge(clipped, vp.ymax, false, false);
+            // Check if both endpoints are on the same boundary (vertical or horizontal)
+            if (clipped.size() == 2) {
+                const WA_Point& a = clipped[0];
+                const WA_Point& b = clipped[1];
+                // Left
+                if (std::abs(a.x - vp.xmin) < 1e-3 && std::abs(b.x - vp.xmin) < 1e-3)
+                    boundary_segments.emplace_back(a, b);
+                // Right
+                else if (std::abs(a.x - vp.xmax) < 1e-3 && std::abs(b.x - vp.xmax) < 1e-3)
+                    boundary_segments.emplace_back(a, b);
+                // Bottom
+                else if (std::abs(a.y - vp.ymin) < 1e-3 && std::abs(b.y - vp.ymin) < 1e-3)
+                    boundary_segments.emplace_back(a, b);
+                // Top
+                else if (std::abs(a.y - vp.ymax) < 1e-3 && std::abs(b.y - vp.ymax) < 1e-3)
+                    boundary_segments.emplace_back(a, b);
+            }
+            return {clipped, boundary_segments};
+        }
+        // Fallback for polygons (not used in your case)
+        out = wa_clip_edge(out, vp.xmin, true, true);
+        out = wa_clip_edge(out, vp.xmax, true, false);
+        out = wa_clip_edge(out, vp.ymin, false, true);
+        out = wa_clip_edge(out, vp.ymax, false, false);
+        return {out, boundary_segments};
 
     return {out, boundary_segments};
 }
