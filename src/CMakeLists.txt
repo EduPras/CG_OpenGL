@@ -9,6 +9,7 @@ add_executable(
     half_edge.cpp
     mesh.cpp
     xiaolin_wu.cpp
+    weiler-atherton-clip.cpp
     input.cpp
     gui.cpp
 )

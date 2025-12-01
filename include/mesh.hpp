@@ -1,5 +1,4 @@
 
-
 /**
  * @file mesh.hpp
  * @brief Handles mesh loading, transformations, and rendering.
@@ -9,6 +8,7 @@
 #include <string>
 #include "utils.hpp"
 #include "half_edge.hpp"
+#include "weiler-atherton-clip.hpp"
 #include <glm/glm.hpp>
 #include "shader.hpp"
 #include <glm/glm.hpp>
@@ -83,4 +83,8 @@ class Mesh {
             int screenHeight
         );
         const std::string& getName() const { return name; }
+    // Project all mesh vertices to screen space
+    std::vector<glm::vec2> projectToScreenSpace(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection, int screenWidth, int screenHeight);
+    // Clip all mesh edges to the viewport, return a list of visible edge segments (in screen space)
+    std::vector<std::pair<glm::vec2, glm::vec2>> clipToViewport(const std::vector<glm::vec2>& screenVerts, int screenWidth, int screenHeight);
 };
