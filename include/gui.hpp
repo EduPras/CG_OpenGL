@@ -44,4 +44,4 @@ void shutdownImGui();
  * @param mesh Reference to the mesh object.
  * @param transformState Pointer to the current transformation state struct.
  */
-void renderGui(GuiState& state, Mesh& mesh, TransformState* transformState);
+void renderGui(GuiState& state, Mesh& mesh, TransformState* transformState, ViewportRect& viewportRect);

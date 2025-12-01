@@ -5,6 +5,7 @@
 #include <imgui_impl_opengl3.h>
 
 #include "input.hpp"
+#include "globals.hpp"
 
 void setupImGui(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -19,7 +20,7 @@ void shutdownImGui() {
     ImGui::DestroyContext();
 }
 
-void renderGui(GuiState& state, Mesh& mesh, TransformState* transformState) {
+void renderGui(GuiState& state, Mesh& mesh, TransformState* transformState, ViewportRect& viewportRect) {
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -53,6 +54,17 @@ void renderGui(GuiState& state, Mesh& mesh, TransformState* transformState) {
     if (ImGui::RadioButton("XIAOLIN_WU", mesh.currentRenderMode == Mesh::RenderMode::XIAOLIN_WU)) {
         mesh.setRenderMode(Mesh::RenderMode::XIAOLIN_WU);
     }
+
+    ImGui::Separator();
+    ImGui::Text("Viewport Rectangle");
+    static int min_limit = 0;
+    int max_width = ImGui::GetIO().DisplaySize.x;
+    int max_height = ImGui::GetIO().DisplaySize.y;
+    ImGui::SliderInt("x_min", &viewportRect.x_min, min_limit, viewportRect.x_max - 1);
+    ImGui::SliderInt("y_min", &viewportRect.y_min, min_limit, viewportRect.y_max - 1);
+    ImGui::SliderInt("x_max", &viewportRect.x_max, viewportRect.x_min + 1, max_width);
+    ImGui::SliderInt("y_max", &viewportRect.y_max, viewportRect.y_min + 1, max_height);
+    ImGui::Text("Viewport: (%d, %d) - (%d, %d)", viewportRect.x_min, viewportRect.y_min, viewportRect.x_max, viewportRect.y_max);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

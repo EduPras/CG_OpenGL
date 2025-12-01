@@ -18,8 +18,6 @@
 #include "half_edge.hpp"
 #include "utils.hpp"
 
-
-
 TransformState transformState;
 int WIDTH = 1080, HEIGHT = 1080;
 
@@ -94,11 +92,6 @@ int main(int argc, char* argv[]) {
         // Update viewportRect in case window size changed
         int overlay_width, overlay_height;
         glfwGetFramebufferSize(window, &overlay_width, &overlay_height);
-        int margin = 100;
-        viewportRect.x_min = margin;
-        viewportRect.y_min = margin;
-        viewportRect.x_max = overlay_width - margin;
-        viewportRect.y_max = overlay_height - margin;
 
         // Get MVP matrices
         glm::mat4 model, view, projection;
@@ -134,7 +127,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Pass selected object to GUI (for future selection logic)
-        renderGui(guiState, objects[guiState.selected_object], &transformState);
+        renderGui(guiState, objects[guiState.selected_object], &transformState, viewportRect);
 
 
         // Draw viewport rectangle overlay using ImGui
