@@ -1,3 +1,6 @@
+// For per-object transformation
+#include <vector>
+#include "mesh.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -35,6 +38,27 @@ struct InputState {
 // A single global instance of our input state
 static InputState input_state;
 
+// Transformation mode state
+static bool viewportMode = true;
+
+bool isViewportMode() {
+    return viewportMode;
+}
+
+void toggleTransformMode() {
+    viewportMode = !viewportMode;
+}
+
+// Object selection state
+static int objectCount = 1;
+static int selectedObject = 0;
+static ObjectSelectCallback objectSelectCallback = nullptr;
+
+void setObjectSelectCallback(ObjectSelectCallback cb, int count) {
+    objectSelectCallback = cb;
+    objectCount = count;
+}
+
 // Shear state API
 bool isShearModeActive() {
     return input_state.shear_mode;
@@ -71,6 +95,14 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
+static std::vector<Mesh>* g_objectsPtr = nullptr;
+static int* g_selectedIndexPtr = nullptr;
+
+void setObjectTransformTargets(std::vector<Mesh>* objectsPtr, int* selectedIndexPtr) {
+    g_objectsPtr = objectsPtr;
+    g_selectedIndexPtr = selectedIndexPtr;
+}
+
 // Called when the mouse cursor moves
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     ImGuiIO& io = ImGui::GetIO();
@@ -79,7 +111,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     }
 
     if (!input_state.is_dragging_left) {
-        return; 
+        return;
     }
 
     // Calculate the change in mouse position from the last frame
@@ -90,30 +122,51 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     bool shift_pressed = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
                           glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
 
-
-    if (shift_pressed) {
-        // If Shift is down, we pan the model.
-        int width, height;
-        glfwGetWindowSize(window, &width, &height);
-        if (width > 0 && height > 0) {
-            // Scale pan speed by zoom level to feel more natural
-            float pan_speed = 2.0f / *input_state.zoom_level;
-            input_state.pan_offset->x += static_cast<float>(dx) / static_cast<float>(width) * pan_speed;
-            input_state.pan_offset->y -= static_cast<float>(dy) / static_cast<float>(height) * pan_speed; // Y is inverted
+    // If in object mode and targets are set, transform selected object
+    if (!isViewportMode() && g_objectsPtr && g_selectedIndexPtr && *g_selectedIndexPtr >= 0 && *g_selectedIndexPtr < (int)g_objectsPtr->size()) {
+        Mesh& obj = (*g_objectsPtr)[*g_selectedIndexPtr];
+        if (shift_pressed) {
+            // Pan: translate object
+            float pan_speed = 2.0f;
+            obj.objectTransform = glm::translate(obj.objectTransform, glm::vec3(static_cast<float>(dx) * pan_speed * 0.001f, -static_cast<float>(dy) * pan_speed * 0.001f, 0.0f));
+        } else {
+            // Rotate object
+            float sensitivity = 0.005f;
+            switch (input_state.rotation_axis) {
+                case RotationAxis::X:
+                    obj.objectTransform = glm::rotate(obj.objectTransform, static_cast<float>(dy) * sensitivity, glm::vec3(1,0,0));
+                    break;
+                case RotationAxis::Y:
+                    obj.objectTransform = glm::rotate(obj.objectTransform, static_cast<float>(dx) * sensitivity, glm::vec3(0,1,0));
+                    break;
+                case RotationAxis::Z:
+                    obj.objectTransform = glm::rotate(obj.objectTransform, static_cast<float>(dx) * sensitivity, glm::vec3(0,0,1));
+                    break;
+            }
         }
     } else {
-        // If Shift is NOT down, we rotate the model on the selected axis.
-        float sensitivity = 0.005f;
-        switch (input_state.rotation_axis) {
-            case RotationAxis::X:
-                *input_state.rotation_angle_x += static_cast<float>(dy) * sensitivity;
-                break;
-            case RotationAxis::Y:
-                *input_state.rotation_angle_y += static_cast<float>(dx) * sensitivity;
-                break;
-            case RotationAxis::Z:
-                *input_state.rotation_angle_z += static_cast<float>(dx) * sensitivity;
-                break;
+        // Viewport mode: transform camera/global
+        if (shift_pressed) {
+            int width, height;
+            glfwGetWindowSize(window, &width, &height);
+            if (width > 0 && height > 0) {
+                float pan_speed = 2.0f / *input_state.zoom_level;
+                input_state.pan_offset->x += static_cast<float>(dx) / static_cast<float>(width) * pan_speed;
+                input_state.pan_offset->y -= static_cast<float>(dy) / static_cast<float>(height) * pan_speed;
+            }
+        } else {
+            float sensitivity = 0.005f;
+            switch (input_state.rotation_axis) {
+                case RotationAxis::X:
+                    *input_state.rotation_angle_x += static_cast<float>(dy) * sensitivity;
+                    break;
+                case RotationAxis::Y:
+                    *input_state.rotation_angle_y += static_cast<float>(dx) * sensitivity;
+                    break;
+                case RotationAxis::Z:
+                    *input_state.rotation_angle_z += static_cast<float>(dx) * sensitivity;
+                    break;
+            }
         }
     }
 
@@ -129,13 +182,18 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
         return;
     }
 
-    // yoffset will be +1 for scrolling up (zoom in) and -1 for scrolling down (zoom out)
-    float zoom_change = *input_state.zoom_level * 0.1f * static_cast<float>(yoffset);
-    *input_state.zoom_level += zoom_change;
-
-    // Clamp the zoom level to prevent it from becoming too small or inverted
-    if (*input_state.zoom_level < 0.1f) {
-        *input_state.zoom_level = 0.1f;
+    if (!isViewportMode() && g_objectsPtr && g_selectedIndexPtr && *g_selectedIndexPtr >= 0 && *g_selectedIndexPtr < (int)g_objectsPtr->size()) {
+        // Object mode: scale only selected object
+        Mesh& obj = (*g_objectsPtr)[*g_selectedIndexPtr];
+        float scale_factor = 1.0f + 0.1f * static_cast<float>(yoffset);
+        obj.objectTransform = glm::scale(obj.objectTransform, glm::vec3(scale_factor));
+    } else {
+        // Viewport mode: zoom camera
+        float zoom_change = *input_state.zoom_level * 0.1f * static_cast<float>(yoffset);
+        *input_state.zoom_level += zoom_change;
+        if (*input_state.zoom_level < 0.1f) {
+            *input_state.zoom_level = 0.1f;
+        }
     }
 }
 
@@ -147,9 +205,19 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         return;
     }
 
+    if (action == GLFW_PRESS) {
+        if (key == GLFW_KEY_V) {
+            toggleTransformMode();
+        } else if (key == GLFW_KEY_TAB && objectCount > 1) {
+            selectedObject = (selectedObject + 1) % objectCount;
+            if (objectSelectCallback) objectSelectCallback(selectedObject);
+        }
+    }
+
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
+
     if (action == GLFW_PRESS) {
         if (key == GLFW_KEY_S) {
             input_state.shear_mode = !input_state.shear_mode;
@@ -160,10 +228,25 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         } else if (input_state.shear_mode) {
             // Handle shearing with left/right arrows
             float shear_step = 0.05f;
-            if (key == GLFW_KEY_LEFT) {
-                input_state.shear_value -= shear_step;
-            } else if (key == GLFW_KEY_RIGHT) {
-                input_state.shear_value += shear_step;
+            if (!isViewportMode() && g_objectsPtr && g_selectedIndexPtr && *g_selectedIndexPtr >= 0 && *g_selectedIndexPtr < (int)g_objectsPtr->size()) {
+                // Object mode: apply shear to selected object's transform and persist
+                Mesh& obj = (*g_objectsPtr)[*g_selectedIndexPtr];
+                if (key == GLFW_KEY_LEFT) {
+                    glm::mat4 shear = glm::mat4(1.0f);
+                    shear[1][0] = -shear_step;
+                    obj.objectTransform = shear * obj.objectTransform;
+                } else if (key == GLFW_KEY_RIGHT) {
+                    glm::mat4 shear = glm::mat4(1.0f);
+                    shear[1][0] = shear_step;
+                    obj.objectTransform = shear * obj.objectTransform;
+                }
+            } else {
+                // Viewport mode: update shear value as before
+                if (key == GLFW_KEY_LEFT) {
+                    input_state.shear_value -= shear_step;
+                } else if (key == GLFW_KEY_RIGHT) {
+                    input_state.shear_value += shear_step;
+                }
             }
         } else {
             // Only allow rotation axis switching if not in shear mode

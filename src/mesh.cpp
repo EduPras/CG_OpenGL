@@ -1,3 +1,5 @@
+// Add constructor with name
+// Mesh::Mesh(const std::string& name_) : name(name_) {}
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -6,58 +8,14 @@
 
 #include "utils.hpp"
 #include "xiaolin_wu.hpp"
-#include "bresenham.hpp"
 #include "mesh.hpp"
 
-// Bresenham rendering for 2D lines with 3D projection
-void Mesh::drawWithBresenham(
-    Shader* shader,
-    const glm::mat4& model,
-    const glm::mat4& view,
-    const glm::mat4& projection,
-    int screenWidth,
-    int screenHeight
-) {
-    bresenham_vertex_buffer.clear();
-    glm::vec4 lineColor = {1.0f, 1.0f, 1.0f, 1.0f};
-    for (const auto& edge : edge_indices) {
-        glm::vec3 p1_local = {verticesHE[edge.first].x, verticesHE[edge.first].y, verticesHE[edge.first].z};
-        glm::vec3 p2_local = {verticesHE[edge.second].x, verticesHE[edge.second].y, verticesHE[edge.second].z};
-        glm::vec3 p1_world = glm::vec3(model * glm::vec4(p1_local, 1.0f));
-        glm::vec3 p2_world = glm::vec3(model * glm::vec4(p2_local, 1.0f));
-        std::vector<glm::ivec2> points = bresenhamLine(p1_world, p2_world, screenWidth, screenHeight, projection, view, glm::mat4(1.0f));
-        for (const auto& pt : points) {
-            WuVertex v;
-            v.position = glm::vec2(pt.x, pt.y);
-            v.color = lineColor;
-            bresenham_vertex_buffer.push_back(v);
-        }
-    }
-    bresenham_point_count = bresenham_vertex_buffer.size();
-    if (bresenham_point_count > 0) {
-        shader->activate();
-        shader->setVec2("u_screenSize", {screenWidth, screenHeight});
-        glDisable(GL_DEPTH_TEST);
-        // Use VAO_wu/VBO_wu for simplicity (same as Wu)
-        glBindVertexArray(VAO_wu);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_wu);
-        if (bresenham_point_count > wu_vbo_allocated_size) {
-            wu_vbo_allocated_size = bresenham_point_count * 1.5;
-            glBufferData(GL_ARRAY_BUFFER, wu_vbo_allocated_size * sizeof(WuVertex), bresenham_vertex_buffer.data(), GL_DYNAMIC_DRAW);
-        } else {
-            glBufferSubData(GL_ARRAY_BUFFER, 0, bresenham_point_count * sizeof(WuVertex), bresenham_vertex_buffer.data());
-        }
-        glDrawArrays(GL_POINTS, 0, bresenham_point_count);
-        glBindVertexArray(0);
-        glEnable(GL_DEPTH_TEST);
-    }
-}
-
 // Constructor initializes all OpenGL handles to 0 and sets default render mode
-Mesh::Mesh() : 
-    VAO_lines(0), VBO_lines(0), EBO_lines(0), line_index_count(0),
-    VAO_points(0), VBO_points(0), point_vertex_count(0),
-    currentRenderMode(POINTS), // Default to the DDA points renderer
+Mesh::Mesh(const std::string& name_) : 
+    // VAO_lines(0), VBO_lines(0), EBO_lines(0), line_index_count(0),
+    // VAO_points(0), VBO_points(0), point_vertex_count(0),
+    name(name_),
+    currentRenderMode(XIAOLIN_WU), // Default to the DDA points renderer
     shader(nullptr)
 {
 }
@@ -107,110 +65,35 @@ void Mesh::setupMesh() {
         return;
     }
 
-    // GL_LINES
-    {
-        std::vector<unsigned int> line_indices;
-        // Iterate through all half-edges to find unique edges for drawing
-        for (const auto& he : halfedgesHE) {
-            // To avoid processing each edge twice (once for each twin),
-            // we only process the one with the lower memory address.
-            if (he.twin != nullptr && &he > he.twin) {
-                continue;
-            }
-            
-            // Get the integer indices of the start and end vertices of the edge
-            unsigned int idx1 = he.origin - &verticesHE[0];
-            unsigned int idx2 = he.next->origin - &verticesHE[0];
-            line_indices.push_back(idx1);
-            line_indices.push_back(idx2);
+    edge_indices.clear();
+
+    for (const auto& he : halfedgesHE) {
+        if (he.twin != nullptr && &he > he.twin) {
+            continue;
         }
-        line_index_count = line_indices.size();
-
-        glGenVertexArrays(1, &VAO_lines);
-        glGenBuffers(1, &VBO_lines);
-        glGenBuffers(1, &EBO_lines);
-
-        glBindVertexArray(VAO_lines);
-        
-        // VBO: Contains all vertex data (x, y, z, pointer, etc.)
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_lines);
-        glBufferData(GL_ARRAY_BUFFER, verticesHE.size() * sizeof(Vertex), verticesHE.data(), GL_STATIC_DRAW);
-
-        // EBO: Contains pairs of indices telling OpenGL which vertices form a line
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_lines);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, line_indices.size() * sizeof(unsigned int), line_indices.data(), GL_STATIC_DRAW);
-
-        // Tell OpenGL how to interpret the vertex data
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));
-        glEnableVertexAttribArray(0);
-        
-        glBindVertexArray(0);
+        unsigned int idx1 = he.origin - &verticesHE[0];
+        unsigned int idx2 = he.next->origin - &verticesHE[0];
+        edge_indices.push_back({idx1, idx2});
     }
 
-    // GL_POINTS (DDA)
-    {
-        std::vector<float> point_cloud_vertices;
-        for (const auto& he : halfedgesHE) {
-            if (he.twin != nullptr && &he > he.twin) continue;
+    glGenVertexArrays(1, &VAO_wu);
+    glGenBuffers(1, &VBO_wu);
 
-            Vertex* v1 = he.origin;
-            Vertex* v2 = he.next->origin;
+    glBindVertexArray(VAO_wu);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_wu);
 
-            // Generate a list of points along the edge using your DDA function
-            auto edge_points = drawSegmentByLineEquation3D({v1->x, v1->y, v1->z}, {v2->x, v2->y, v2->z});
-            for(const auto& p : edge_points) {
-                point_cloud_vertices.push_back(p.x);
-                point_cloud_vertices.push_back(p.y);
-                point_cloud_vertices.push_back(p.z);
-            }
-        }
-        point_vertex_count = point_cloud_vertices.size() / 3;
+    // Allocating an initial size for the Wu VBO
+    wu_vbo_allocated_size = 2000000;
+    glBufferData(GL_ARRAY_BUFFER, wu_vbo_allocated_size * sizeof(WuVertex), nullptr, GL_DYNAMIC_DRAW);
 
-        glGenVertexArrays(1, &VAO_points);
-        glGenBuffers(1, &VBO_points);
+    // Position attribute (vec2)
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(WuVertex), (void*)offsetof(WuVertex, position));
+    glEnableVertexAttribArray(0);
+    // Color attribute (vec4)
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(WuVertex), (void*)offsetof(WuVertex, color));
+    glEnableVertexAttribArray(1);
 
-        glBindVertexArray(VAO_points);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_points);
-        glBufferData(GL_ARRAY_BUFFER, point_cloud_vertices.size() * sizeof(float), point_cloud_vertices.data(), GL_STATIC_DRAW);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-
-        glBindVertexArray(0);
-    }
-
-    // XIAOLIN_WU
-    {
-        edge_indices.clear();
-
-        for (const auto& he : halfedgesHE) {
-            if (he.twin != nullptr && &he > he.twin) {
-                continue;
-            }
-            unsigned int idx1 = he.origin - &verticesHE[0];
-            unsigned int idx2 = he.next->origin - &verticesHE[0];
-            edge_indices.push_back({idx1, idx2});
-        }
-
-        glGenVertexArrays(1, &VAO_wu);
-        glGenBuffers(1, &VBO_wu);
-
-        glBindVertexArray(VAO_wu);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_wu);
-
-        // Allocating an initial size for the Wu VBO
-        wu_vbo_allocated_size = 2000000;
-        glBufferData(GL_ARRAY_BUFFER, wu_vbo_allocated_size * sizeof(WuVertex), nullptr, GL_DYNAMIC_DRAW);
-
-        // Position attribute (vec2)
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(WuVertex), (void*)offsetof(WuVertex, position));
-        glEnableVertexAttribArray(0);
-        // Color attribute (vec4)
-        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(WuVertex), (void*)offsetof(WuVertex, color));
-        glEnableVertexAttribArray(1);
-
-        glBindVertexArray(0);
-    }
+    glBindVertexArray(0);
 }
 
 void Mesh::drawWithXiaolinWu(Shader* shader,
@@ -288,16 +171,16 @@ void Mesh::drawWithXiaolinWu(Shader* shader,
     }
 }
 
-void Mesh::draw(glm::mat4& view, glm::mat4& projection, Shader *shader, int screenWidth, int screenHeight) {
-    setShader(shader);
-    if (currentRenderMode == LINES) {
-        glBindVertexArray(VAO_lines);
-        glDrawElements(GL_LINES, line_index_count, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-    } else if (currentRenderMode == POINTS) {
-        glBindVertexArray(VAO_points);
-        glDrawArrays(GL_POINTS, 0, point_vertex_count);
-        glBindVertexArray(0);
-    }
-}
+// void Mesh::draw(glm::mat4& view, glm::mat4& projection, Shader *shader, int screenWidth, int screenHeight) {
+//     setShader(shader);
+//     if (currentRenderMode == LINES) {
+//         glBindVertexArray(VAO_lines);
+//         glDrawElements(GL_LINES, line_index_count, GL_UNSIGNED_INT, 0);
+//         glBindVertexArray(0);
+//     } else if (currentRenderMode == POINTS) {
+//         glBindVertexArray(VAO_points);
+//         glDrawArrays(GL_POINTS, 0, point_vertex_count);
+//         glBindVertexArray(0);
+//     }
+// }
 

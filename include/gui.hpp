@@ -20,6 +20,11 @@ struct GuiState {
     int selected_edge = 0;          ///< Currently selected edge index
     std::vector<std::string> results; ///< Query results to display in the GUI
     std::vector<float> highlighted_vertices; ///< Highlighted geometry for rendering
+
+    // For object selection
+    int selected_object = 0;
+    std::vector<std::string> object_names;
+    std::string selected_object_name;
 };
 
 /**

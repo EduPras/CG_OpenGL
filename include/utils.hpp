@@ -80,8 +80,8 @@ struct TransformState {
     float zoom_level = 1.0f;
     float rotation_angle_x = 0.0f;
     float rotation_angle_y = 0.0f;
-        float rotation_angle_z = 0.0f;
-        float pov = 45.0f;
+    float rotation_angle_z = 0.0f;
+    float pov = 45.0f;
     glm::vec2 pan_offset = glm::vec2(0.0f, 0.0f);
 };
 

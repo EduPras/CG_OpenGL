@@ -17,6 +17,11 @@ float getShearValue();
 void resetShear();
 void setShearValue(float value);
 
+void setObjectTransformTargets(std::vector<Mesh>* objectsPtr, int* selectedIndexPtr);
+
+// Transformation mode: true = viewport, false = object
+bool isViewportMode();
+void toggleTransformMode();
 void setupInputCallbacks(
     GLFWwindow* window,
     float* zoom,
@@ -25,3 +30,7 @@ void setupInputCallbacks(
     float* rot_z,
     glm::vec2* pan
 );
+
+// Object selection (TAB key)
+typedef void (*ObjectSelectCallback)(int newIndex);
+void setObjectSelectCallback(ObjectSelectCallback cb, int objectCount);

@@ -22,45 +22,62 @@ TransformState transformState;
 int WIDTH = 1080, HEIGHT = 1080;
 
 
+// Helper to load a mesh from file and add to vectors
+void loadMeshObject(const std::string& filename, std::vector<Mesh>& objects, std::vector<std::string>& object_names) {
+    Mesh mesh(filename);
+    if (!mesh.loadFromOBJ(filename)) {
+        std::cerr << "Failed to load mesh: " << filename << std::endl;
+        return;
+    }
+    mesh.buildHalfEdge();
+    mesh.setupMesh();
+    mesh.setRenderMode(Mesh::XIAOLIN_WU);
+    objects.push_back(mesh);
+    object_names.push_back(filename);
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
-        return 1; 
+        std::cerr << "Usage: " << argv[0] << " <filename1> [filename2 ...]" << std::endl;
+        return 1;
     }
-    std::string filename = argv[1]; 
 
     GLFWwindow* window = setupGLFW();
     if (!window) return -1;
 
-
     // Previous transform state
     loadTransformState("state.json", transformState);
 
-    Mesh mesh;
-    if (!mesh.loadFromOBJ(filename)) {
-        std::cerr << "Failed to load mesh, exiting." << std::endl;
+    // Support multiple objects
+    std::vector<Mesh> objects;
+    std::vector<std::string> object_names;
+    for (int i = 1; i < argc; ++i) {
+        loadMeshObject(argv[i], objects, object_names);
+    }
+    if (objects.empty()) {
+        std::cerr << "No valid meshes loaded. Exiting." << std::endl;
         return -1;
     }
-    mesh.buildHalfEdge();
-    mesh.setupMesh();
 
-    Shader gpu_shader("shaders/vertex_core.glsl", "shaders/fragment_core.glsl");
     Shader wu_shader("shaders/wu_line.vert", "shaders/wu_line.frag");
 
     wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
-    setupInputCallbacks(window, &transformState.zoom_level, &transformState.rotation_angle_x, &transformState.rotation_angle_y, &transformState.rotation_angle_z,  &transformState.pan_offset);
-    
-    GLuint highlightVAO, highlightVBO;
-    glGenVertexArrays(1, &highlightVAO);
-    glGenBuffers(1, &highlightVBO);
-    glBindVertexArray(highlightVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, highlightVBO);
-    glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_DYNAMIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glBindVertexArray(0);
 
     GuiState guiState;
+    guiState.selected_object = 0;
+    guiState.object_names = object_names;
+    setObjectTransformTargets(&objects, &guiState.selected_object);
+
+    // Static callback for object selection
+    static GuiState* guiStatePtr = nullptr;
+    auto onObjectSelectFunc = [](int newIndex) {
+        if (guiStatePtr) guiStatePtr->selected_object = newIndex;
+    };
+    guiStatePtr = &guiState;
+
+    setObjectSelectCallback(onObjectSelectFunc, objects.size());
+    setupInputCallbacks(window, &transformState.zoom_level, &transformState.rotation_angle_x, &transformState.rotation_angle_y, &transformState.rotation_angle_z,  &transformState.pan_offset);
+
     setupImGui(window);
 
     while (!glfwWindowShouldClose(window)) {
@@ -75,52 +92,39 @@ int main(int argc, char* argv[]) {
         float aspect_ratio = (height > 0) ? (float)width / (float)height : 1.0f;
         projection = glm::perspective(glm::radians(transformState.pov), aspect_ratio, 0.1f, 100.0f);
         view = glm::translate(glm::mat4(1.0f), glm::vec3(transformState.pan_offset.x, transformState.pan_offset.y, -3.0f / transformState.zoom_level));
-        model = glm::mat4(1.0f);
-        // X by Y shear
-        if (isShearModeActive()) {
-            float sh = getShearValue();
-            glm::mat4 shear = glm::mat4(1.0f);
-            shear[1][0] = sh; // Shear X by Y (x' = x + sh*y)
-            model = shear * model;
-        }
-        model = glm::rotate(model, transformState.rotation_angle_z, glm::vec3(0.0f, 0.0f, 1.0f));
-        model = glm::rotate(model, transformState.rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, transformState.rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
 
-        // Render based on selected mode
-        if (mesh.currentRenderMode == Mesh::RenderMode::XIAOLIN_WU) {
-            wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
-            mesh.drawWithXiaolinWu(&wu_shader, model, view, projection, width, height);
-        } else if (mesh.currentRenderMode == Mesh::RenderMode::BRESENHAM) {
-            wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            mesh.drawWithBresenham(&wu_shader, model, view, projection, width, height);
-        } else {
-            gpu_shader.setMat4("u_model", model);
-            gpu_shader.setMat4("u_view", view);
-            gpu_shader.setMat4("u_projection", projection);
-            gpu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 1.0f, 1.0f));
-            mesh.draw(view, projection, &gpu_shader, width, height);
-        }
+        // Handle transformation mode
+        for (size_t i = 0; i < objects.size(); ++i) {
+            // Always start with viewport transform
+            glm::mat4 model = glm::mat4(1.0f);
+            // Shear: in viewport mode, apply to all; in object mode, do nothing here (handled in input)
+            if (isShearModeActive() && isViewportMode()) {
+                float sh = getShearValue();
+                glm::mat4 shear = glm::mat4(1.0f);
+                shear[1][0] = sh;
+                model = shear * model;
+            }
+            model = glm::rotate(model, transformState.rotation_angle_z, glm::vec3(0.0f, 0.0f, 1.0f));
+            model = glm::rotate(model, transformState.rotation_angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::rotate(model, transformState.rotation_angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
 
-        // Draw highlighted geometry in green
-        if (!guiState.highlighted_vertices.empty()) {
-            glDisable(GL_DEPTH_TEST);
-            gpu_shader.setVec4("vertexColor", glm::vec4(0.1f, 1.0f, 0.2f, 1.0f));
-            glBindVertexArray(highlightVAO);
-            glBindBuffer(GL_ARRAY_BUFFER, highlightVBO);
-            glBufferData(GL_ARRAY_BUFFER, guiState.highlighted_vertices.size() * sizeof(float), guiState.highlighted_vertices.data(), GL_DYNAMIC_DRAW);
-            glDrawArrays(GL_LINES, 0, guiState.highlighted_vertices.size() / 3);
-            glBindVertexArray(0);
-            glEnable(GL_DEPTH_TEST);
+            // Always apply per-object transform
+            model = model * objects[i].objectTransform;
+
+            if ((int)i == guiState.selected_object && !isViewportMode()) {
+                wu_shader.setVec4("vertexColor", glm::vec4(0.2f, 1.0f, 0.2f, 1.0f)); // green
+            } else {
+                wu_shader.setVec4("vertexColor", glm::vec4(1.0f, 0.5f, 0.5f, 1.0f)); // default
+            }
+            objects[i].drawWithXiaolinWu(&wu_shader, model, view, projection, width, height);
         }
 
-        renderGui(guiState, mesh, &transformState);
+        // Pass selected object to GUI (for future selection logic)
+        renderGui(guiState, objects[guiState.selected_object], &transformState);
         glfwSwapBuffers(window);
     }
 
     // Cleanup
-    glDeleteVertexArrays(1, &highlightVAO);
-    glDeleteBuffers(1, &highlightVBO);
     shutdownImGui();
     glfwDestroyWindow(window);
     glfwTerminate();
