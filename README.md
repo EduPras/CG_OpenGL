@@ -2,54 +2,100 @@
 
 A modular C++ OpenGL project for interactive mesh visualization, featuring a robust half-edge mesh data structure, OBJ loading, and real-time viewport controls.
 
+![app](./imgs/app.png)
+
 
 ## Summary
 
-- [Running](#running)
-- [Half-Edge Mesh: Logic and Math](#half-edge-mesh-logic-and-math)
+- [Usage and Modes](#usage-and-modes)
+- [Algorithms](#algorithms)
 - [Transformations: Math and Logic](#transformations-math-and-logic)
 - [Shader Pipeline: How Rendering Works](#shader-pipeline-how-rendering-works)
 - [Module Overview](#module-overview)
-- [Interactive Controls](#interactive-controls)
-- [Building and Running](#building-and-running)
+- [Dependencies](#dependencies)
 - [References](#references)
 
-## Running
+
+
+## Usage and Modes
+
+The application can be run inside a docker container too, just make sure you have X11.
+
 ```sh
 ASSET_FILE=bunny.obj docker compose up
 ```
+When running the application, you can interactively switch between different transformation and editing modes:
 
-## Half-Edge Mesh: Logic and Math
+### Modes
+- **Viewport Mode**: Transform (move/scale) the viewport rectangle. Only the part of the mesh inside the viewport is shown.
+- **Object Mode**: Transform (move/scale/rotate) the mesh object itself.
+- **Shear Mode**: Apply a shear transformation to the mesh.
+
+### Switching Modes
+Use the following keyboard shortcuts to change modes:
+
+- `V` — Toggle between Viewport and Object mode
+- `S` — Shear Mode
+
+The current mode is usually displayed in the UI or console.
+
+### Controls
+- **Rotate**: Left mouse drag (in Object Mode)
+- **Scale/Zoom**: Mouse scroll (in Object or Viewport Mode)
+- **Translate/Pan**: Hold SHIFT and drag mouse (in Object or Viewport Mode)
+- **Shear**: Use the appropriate key or UI control in Shear Mode (see on-screen instructions or ImGui panel)
+<!-- - **Viewport Resize**: In Viewport Mode, drag the viewport corners/edges or use ImGui sliders if available -->
+
+
+## Algorithms 
+
+### Rasterization - Xiaolin Wu
+
+This project uses Xiaolin Wu's anti-aliased line drawing algorithm for smooth, visually appealing lines. Unlike standard Bresenham or DDA algorithms, Xiaolin Wu's method computes pixel intensities based on the line's coverage, resulting in less jagged edges and higher-quality rendering.
+
+- **How it works**: For each step along the line, the algorithm determines the two nearest pixels and assigns them intensities proportional to their distance from the ideal line.
+- **Result**: Lines appear smooth, with gradual blending at the edges, reducing the "staircase" effect.
+
+
+### Clipping - Weiler-Atherton Polygon 
+
+The Weiler-Atherton algorithm is used to clip arbitrary polygons (including concave ones) against a rectangular viewport. It efficiently computes the intersection of the mesh faces with the viewport, producing new polygons that fit exactly within the visible area.
+
+- **How it works**: The algorithm walks around the polygon and the clipping rectangle, inserting intersection points and following the appropriate path to build the clipped polygon.
+- **Result**: Only the visible portion of each face is rendered, and intersection lines with the viewport are correctly visualized.
+
+
+### Mesh - Half-Edge Mesh
 
 A half-edge mesh is a data structure for representing polygonal meshes, enabling efficient traversal and adjacency queries. Each edge is split into two "half-edges" with opposite directions.
 
-### Core Structures
+#### Core Structures
 
 - **Vertex**: Stores position and a pointer to one outgoing half-edge.
 - **HalfEdge**: Stores pointers to its origin vertex, twin (opposite) half-edge, next half-edge in the face, and the face it borders.
 - **Face**: Stores a pointer to one of its bounding half-edges.
 
-### Construction Logic
+#### Construction Logic
 
 Given a list of points and face indices:
 1. For each face, create a loop of half-edges, each pointing to its origin vertex and the next half-edge.
 2. For each half-edge, find its twin (the half-edge with reversed origin/destination) and set the twin pointer.
 3. Assign one outgoing half-edge to each vertex and one bounding half-edge to each face.
 
-### Adjacency Queries
+#### Adjacency Queries
 
 - **Adjacent Faces of a Face**: For each half-edge of the face, if its twin exists, the twin’s face is adjacent.
 - **Adjacent Faces of an Edge**: The two faces sharing the edge (via the half-edge and its twin).
 - **Faces of a Vertex**: Walk around the vertex using outgoing half-edges, collecting each face.
 - **Edges of a Vertex**: Walk around the vertex, collecting each outgoing half-edge.
 
-### Math Under the Hood
+#### Math Under the Hood
 
 - **Edge Representation**: Each edge is represented as a pair of half-edges with opposite directions.
 - **Traversal**: To walk around a face, follow the `next` pointers of its half-edges. To walk around a vertex, follow `twin->next` pointers.
 - **Twin Lookup**: For each half-edge from vertex A to B, its twin is the half-edge from B to A.
 
-#### Example: Walking Around a Vertex
+##### Example: Walking Around a Vertex
 
 ```cpp
 do {
@@ -130,30 +176,14 @@ The project uses a modern OpenGL shader pipeline for rendering:
 
 ## Module Overview
 
-### mesh
-- Loads OBJ files, stores vertex and face data, and builds the half-edge mesh structure.
-
-### input
-- Handles all user input (mouse, keyboard, scroll) and updates transformation state (rotation, zoom, pan).
-
-### half_edge
-- Implements the half-edge mesh data structure and provides efficient adjacency queries.
-
-### utils
-- Utility functions for OBJ parsing, DDA line drawing, and OpenGL setup.
-
-### shader
-- Loads, compiles, and manages OpenGL shader programs.
+- **mesh**: Loads OBJ files, stores vertex and face data, and builds the half-edge mesh structure.
+- **input**: Handles all user input (mouse, keyboard, scroll) and updates transformation state (rotation, zoom, pan).
+- **half_edge**: Implements the half-edge mesh data structure and provides efficient adjacency queries.
+- **utils**: Utility functions for OBJ parsing, DDA line drawing, and OpenGL setup.
+- **shader**: Loads, compiles, and manages OpenGL shader programs.
 
 
-## Interactive Controls
-
-- **Rotate**: Drag mouse
-- **Zoom**: Mouse scroll
-- **Pan**: Hold SHIFT and drag mouse
-
-
-## Building and Running
+## Dependencies
 
 This project uses [GLFW3](https://www.glfw.org/) for window/context management and [GLAD](https://glad.dav1d.de/) for OpenGL function loading.
 
@@ -207,3 +237,4 @@ To generate API documentation from the source code comments:
 - [GLAD](https://glad.dav1d.de/)
 
 ---
+
